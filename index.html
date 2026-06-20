@@ -23,6 +23,7 @@
     padding:7px 13px;border-radius:7px;cursor:pointer;transition:.15s;white-space:nowrap;}
   .seg button.on{background:var(--ink);color:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);}
   input[type=date]{font:inherit;font-size:12.5px;font-weight:600;border:1px solid var(--line);border-radius:8px;padding:6px 8px;color:var(--ink);background:#fff;}
+  select.din,select#sector{font:inherit;font-size:13px;font-weight:600;border:1px solid var(--line);border-radius:9px;padding:7px 30px 7px 12px;color:var(--ink);background:#fff;cursor:pointer;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns=%27http://www.w3.org/2000/svg%27 width=%2712%27 height=%2712%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%233a3f4a%27 stroke-width=%272.5%27><path d=%27M6 9l6 6 6-6%27/></svg>");background-repeat:no-repeat;background-position:right 10px center;min-width:120px;}
   .achip-d{border-left:3px solid rgb(var(--up));} .bchip-d{border-left:3px solid rgb(var(--down));}
   .row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
   .card{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 1px 2px rgba(0,0,0,.04);}
@@ -81,7 +82,7 @@
     <div class="grp"><span class="lbl">시장</span>
       <div class="seg" id="mkt"><button data-mkt="all" class="on">전체</button><button data-mkt="KOSPI">코스피</button><button data-mkt="KOSDAQ">코스닥</button></div></div>
     <div class="grp"><span class="lbl">섹터</span>
-      <div class="seg" id="sector"><button data-sector="all" class="on">전체</button></div></div>
+      <select id="sector" class="din"><option value="all">전체 섹터</option></select></div>
     <div class="grp"><span class="lbl">보기</span>
       <div class="seg" id="mode"><button data-mode="abs" class="on">등락률</button><button data-mode="rel">상대강도</button></div></div>
     <div class="grp"><span class="lbl">묶기</span>
@@ -240,10 +241,10 @@ async function init(){
     이 파일은 data.json과 같은 폴더에 두고 <b>로컬 서버</b>로 열어야 합니다. 예) <code>python3 -m http.server</code> 후 <code>localhost:8000</code></div>`;
     document.getElementById("sub").textContent="데이터 로딩 실패";return;
   }
-  // 섹터 필터 버튼 동적 생성
-  const sectors=[...new Set(DB.universe.map(s=>s.sector))];
-  const segS=document.getElementById("sector");
-  sectors.forEach(sc=>{const btn=document.createElement("button");btn.dataset.sector=sc;btn.textContent=sc;segS.appendChild(btn);});
+  // 섹터 필터 드롭다운 옵션 동적 생성 (섹터 많아져도 깔끔)
+  const sectors=[...new Set(DB.universe.map(s=>s.sector))].sort();
+  const selS=document.getElementById("sector");
+  sectors.forEach(sc=>{const op=document.createElement("option");op.value=sc;op.textContent=sc;selS.appendChild(op);});
 
   const allDates=Object.values(DB.prices).flatMap(p=>Object.keys(p));
   const minD=allDates.sort()[0], maxD=allDates.sort()[allDates.length-1];
@@ -253,7 +254,7 @@ async function init(){
   document.getElementById("sub").textContent=`실데이터 ${minD} ~ ${maxD} · ${DB.universe.length}종목 · 섹터별 그룹 · 끝점·구간 바꾸면 즉석 재계산`;
   [a1,a2,ep].forEach(el=>el.onchange=render);
   bind("mkt","mkt",v=>state.mkt=v);
-  bind("sector","sector",v=>state.sector=v);
+  document.getElementById("sector").onchange=e=>{state.sector=e.target.value;render();};
   bind("mode","mode",v=>state.mode=v);
   bind("price","price",v=>state.showPrice=(v==="on"));
   bind("groupby","grp",v=>state.groupBy=v);
