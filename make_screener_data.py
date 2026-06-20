@@ -37,7 +37,7 @@ NOTION_DATA_SOURCE_ID = os.environ.get(
     "NOTION_DATA_SOURCE_ID",
     "636b315e-5cc4-4c3e-84c1-daeb5b585079"                 # ← 종목명단 DB의 data source id (이미 채워둠)
 )
-LOOKBACK_DAYS = 100          # 수집할 일수 (1달 등락률 + 여유)
+LOOKBACK_DAYS = 250          # 수집할 일수 (약 1년 거래일). 더 길게 보려면 키우기
 OUTPUT = "data.json"
 # 시장 → 지수 티커 (pykrx 지수코드: 코스피 1001, 코스닥 2001)
 INDEX_CODE = {"코스피": "1001", "코스닥": "2001"}
@@ -124,7 +124,7 @@ def fetch_index_naver(market, need_days=70):
     headers = {"User-Agent": "Mozilla/5.0"}
     out = {}
     page = 1
-    while len(out) < need_days and page <= 12:
+    while len(out) < need_days and page <= 40:
         url = f"https://finance.naver.com/sise/sise_index_day.naver?code={code}&page={page}"
         try:
             r = requests.get(url, headers=headers, timeout=15)
@@ -165,6 +165,35 @@ def _fetch_with_retry(fn, s, e, code, tries=5, wait=1.5):
             last = ex
         time.sleep(wait)
     raise RuntimeError(f"{tries}회 시도 실패: {last}")
+
+
+def enrich_universe(universe):
+    """노션에서 이름/시장이 비어있으면 pykrx로 자동으로 채운다.
+       → 노션엔 티커·섹터·사용만 넣어도 됨 (이름·시장은 자동)."""
+    from pykrx import stock
+    # 코스피·코스닥 전체 티커→이름, 티커→시장 매핑을 한 번만 만든다
+    name_map, market_map = {}, {}
+    try:
+        today = datetime.today().strftime("%Y%m%d")
+        for mk_code, mk_name in [("KOSPI", "코스피"), ("KOSDAQ", "코스닥")]:
+            for tk in stock.get_market_ticker_list(today, market=mk_code):
+                name_map[tk] = stock.get_market_ticker_name(tk)
+                market_map[tk] = mk_name
+    except Exception as ex:
+        print(f"   (자동 이름 채우기 건너뜀: {ex})")
+        return universe
+    filled = 0
+    for u in universe:
+        if u["asset"] != "주식":
+            continue
+        tk = u["ticker"]
+        if not u.get("name") and tk in name_map:
+            u["name"] = name_map[tk]; filled += 1
+        if not u.get("market") and tk in market_map:
+            u["market"] = market_map[tk]
+    if filled:
+        print(f"   → 이름·시장 자동 입력: {filled}종목")
+    return universe
 
 
 def fetch_prices_pykrx(tickers, markets_needed):
@@ -239,9 +268,10 @@ def main():
         sys.exit(1)
     print("1) 노션에서 종목 명단 읽는 중…")
     universe = fetch_universe_from_notion()
-    print(f"   → {len(universe)}종목: " + ", ".join(u["name"] for u in universe))
     if not universe:
         print("✗ 사용=체크된 종목이 없습니다."); sys.exit(1)
+    universe = enrich_universe(universe)   # 이름·시장 비어있으면 자동 채움
+    print(f"   → {len(universe)}종목: " + ", ".join((u["name"] or u["ticker"]) for u in universe))
     markets_needed = sorted({u["market"] for u in universe if u["asset"] == "주식"})
     print("2) pykrx로 시세 수집 중…")
     prices = fetch_prices_pykrx([u["ticker"] for u in universe if u["asset"] == "주식"], markets_needed)
