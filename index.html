@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>상대강도 스크리너</title>
+<style>
+  :root{--ink:#16181d;--ink2:#3a3f4a;--line:#e3e4e8;--bg:#f3f4f6;--card:#fff;
+    --up:220,38,38;--down:37,99,235;--gold:#b08200;}
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo","Noto Sans KR",Roboto,sans-serif;-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:1080px;margin:0 auto;padding:18px 14px 60px;}
+  .top{border-bottom:2px solid var(--ink);padding-bottom:12px;margin-bottom:14px;}
+  .eyebrow{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);font-weight:700;}
+  h1{font-size:22px;margin:6px 0 0;font-weight:800;letter-spacing:-.01em;}
+  .sub{font-size:12px;color:var(--ink2);margin-top:6px;line-height:1.5;}
+  .controls{display:flex;flex-wrap:wrap;gap:13px 16px;align-items:flex-start;margin:15px 0 13px;}
+  .grp{display:flex;flex-direction:column;gap:5px;}
+  .lbl{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink2);font-weight:700;}
+  .seg{display:inline-flex;background:#e7e8ec;border-radius:9px;padding:3px;flex-wrap:wrap;}
+  .seg button{border:0;background:transparent;font:inherit;font-size:13px;font-weight:600;color:var(--ink2);
+    padding:7px 13px;border-radius:7px;cursor:pointer;transition:.15s;white-space:nowrap;}
+  .seg button.on{background:var(--ink);color:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);}
+  input[type=date]{font:inherit;font-size:12.5px;font-weight:600;border:1px solid var(--line);border-radius:8px;padding:6px 8px;color:var(--ink);background:#fff;}
+  .achip-d{border-left:3px solid rgb(var(--up));} .bchip-d{border-left:3px solid rgb(var(--down));}
+  .row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 1px 2px rgba(0,0,0,.04);}
+  .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:14px;}
+  table{border-collapse:separate;border-spacing:0;width:100%;font-size:13px;font-variant-numeric:tabular-nums;min-width:820px;}
+  th,td{padding:11px 8px;text-align:right;white-space:nowrap;}
+  thead th{position:sticky;top:0;background:#fafafb;font-size:11px;font-weight:700;color:var(--ink2);
+    border-bottom:1px solid var(--line);cursor:pointer;user-select:none;z-index:3;vertical-align:bottom;}
+  thead th:hover{color:var(--ink);}
+  th.name,td.name{text-align:left;position:sticky;left:0;background:var(--card);z-index:2;min-width:160px;border-right:1px solid var(--line);}
+  thead th.name{z-index:4;background:#fafafb;cursor:default;}
+  th.hA{color:rgb(var(--up));} th.hB{color:rgb(var(--down));}
+  th.anc{border-bottom:2px solid currentColor;} td.sep,th.sep{border-right:2px solid var(--line);}
+  td.price{color:var(--ink2);} td.nowc,th.nowc{font-weight:800;color:var(--ink);}
+  .tkr{font-size:10.5px;color:#9096a1;font-weight:500;margin-top:2px;}
+  td.name b{font-weight:700;font-size:13.5px;}
+  .rank{display:inline-block;width:15px;color:#9096a1;font-size:11px;margin-right:3px;}
+  .mk{display:inline-block;font-size:9px;font-weight:800;padding:1px 5px;border-radius:4px;margin-left:5px;vertical-align:1.5px;}
+  .mk.k{background:#eef2ff;color:#3949ab;} .mk.q{background:#fff3e0;color:#b45309;}
+  .sct{display:inline-block;font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px;margin-left:4px;vertical-align:1.5px;background:#eef7f0;color:#1f7a44;}
+  tbody tr:hover td{filter:brightness(.97);}
+  /* 그룹 헤더 행 */
+  tr.grphead td{background:#eceef2;font-weight:800;font-size:12px;color:var(--ink);
+    border-top:2px solid #d6d9df;border-bottom:1px solid #d6d9df;cursor:pointer;}
+  tr.grphead td.name{background:#eceef2;}
+  tr.grphead .gmk{font-size:9px;font-weight:800;padding:1px 6px;border-radius:4px;margin-right:6px;}
+  tr.grphead .gcount{font-size:10px;color:#7c828e;font-weight:600;margin-left:6px;}
+  tr.grphead .caret{display:inline-block;width:12px;color:#9096a1;font-size:10px;}
+  /* 지수(벤치) 행 */
+  tr.bm td{background:#1b1d23!important;color:#fff;font-weight:700;}
+  tr.bm td.name{background:#1b1d23!important;color:#fff;} tr.bm td.name b{color:#fff;} tr.bm td.nowc{color:#fff;}
+  tr.bm .tag{font-size:9px;color:#c9cdd6;margin-left:6px;border:1px solid #4a4f5c;border-radius:4px;padding:1px 5px;}
+  .arrow{font-size:9px;color:var(--gold);margin-left:3px;}
+  .legend{display:flex;gap:15px;margin-top:12px;font-size:11.5px;color:var(--ink2);flex-wrap:wrap;}
+  .sw{display:inline-block;width:13px;height:13px;border-radius:3px;vertical-align:-2px;margin-right:5px;}
+  .note{font-size:11px;color:#9096a1;margin-top:16px;line-height:1.6;border-top:1px solid var(--line);padding-top:12px;}
+  .err{background:#fff4f4;border:1px solid #f3c9c9;color:#b42424;padding:14px;border-radius:10px;font-size:13px;margin:14px 0;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="eyebrow">상대강도 스크리너 · 그룹 보기</div>
+    <h1>시장·섹터별 등락률 / 지수 대비 강도</h1>
+    <p class="sub" id="sub">data.json 로딩 중…</p>
+  </div>
+
+  <div class="controls">
+    <div class="grp"><span class="lbl">구간① 시작</span>
+      <input type="date" id="a1" class="achip-d"></div>
+    <div class="grp"><span class="lbl">구간② 시작</span>
+      <input type="date" id="a2" class="bchip-d"></div>
+    <div class="grp"><span class="lbl">끝점 (현재가)</span>
+      <div class="row"><div class="seg" id="endmode"><button data-end="last" class="on">최근</button><button data-end="pick">특정일</button></div>
+      <input type="date" id="endpick" style="display:none"></div></div>
+    <div class="grp"><span class="lbl">시장</span>
+      <div class="seg" id="mkt"><button data-mkt="all" class="on">전체</button><button data-mkt="KOSPI">코스피</button><button data-mkt="KOSDAQ">코스닥</button></div></div>
+    <div class="grp"><span class="lbl">섹터</span>
+      <div class="seg" id="sector"><button data-sector="all" class="on">전체</button></div></div>
+    <div class="grp"><span class="lbl">보기</span>
+      <div class="seg" id="mode"><button data-mode="abs" class="on">등락률</button><button data-mode="rel">상대강도</button></div></div>
+    <div class="grp"><span class="lbl">묶기</span>
+      <div class="seg" id="groupby"><button data-grp="sector" class="on">섹터별</button><button data-grp="none">안 묶기</button></div></div>
+    <div class="grp"><span class="lbl">가격</span>
+      <div class="seg" id="price"><button data-price="on" class="on">표시</button><button data-price="off">숨김</button></div></div>
+  </div>
+
+  <div id="mount"></div>
+
+  <div class="legend">
+    <span><span class="sw" style="background:rgba(220,38,38,.7)"></span>상승 / 초과</span>
+    <span><span class="sw" style="background:rgba(37,99,235,.7)"></span>하락 / 부진</span>
+    <span>· 헤더 클릭 = 정렬 · 그룹 헤더 클릭 = 접기 · 끝점·구간일 바꾸면 즉석 재계산</span>
+  </div>
+  <p class="note">※ 섹터별로 묶어 보기. 그룹 헤더의 값은 그 섹터 종목들의 <b>평균</b>입니다(섹터 자체의 강도). 종목은 그룹 안에서 정렬됩니다. 상대강도 = 종목 − 자기 시장 지수. 거래일 기준(주말·휴장 자동 건너뜀).</p>
+</div>
+
+<script>
+const ROLL=[{label:"1일",key:"d1",n:1},{label:"1주",key:"w1",n:5},{label:"2주",key:"w2",n:10},{label:"1달",key:"M1",n:22}];
+const COLS=[{label:"구간①",key:"a1",anc:"hA",sep:1},{label:"구간②",key:"a2",anc:"hB"},
+  {label:"1일",key:"d1",sep:1},{label:"1주",key:"w1"},{label:"2주",key:"w2"},{label:"1달",key:"M1"}];
+let DB=null, state={mkt:"all",sector:"all",mode:"abs",showPrice:true,sortKey:"a1",sortDir:-1,endMode:"last",groupBy:"sector",collapsed:{}};
+
+function pct(e,s){return Math.round((e-s)/s*1000)/10;}
+function datesOf(t){return Object.keys(DB.prices[t]).sort();}
+function endDate(t){const ds=datesOf(t); if(state.endMode==="last")return ds[ds.length-1];
+  const pick=document.getElementById("endpick").value; let r=null; for(const d of ds){ if(d<=pick)r=d; } return r||ds[ds.length-1];}
+function priceAt(t,d){return DB.prices[t][d];}
+function nearestOnOrBefore(t,target){const ds=datesOf(t);let r=null;for(const d of ds){if(d<=target)r=d;}return r;}
+function nBack(t,endD,n){const ds=datesOf(t);const i=ds.indexOf(endD);const j=i-n;return j>=0?ds[j]:null;}
+
+function computeReturns(t){
+  const a1=document.getElementById("a1").value, a2=document.getElementById("a2").value;
+  const eD=endDate(t); const eP=priceAt(t,eD);
+  const out={_end:eD,_endP:eP,_p1:null,_p2:null};
+  const d1=nearestOnOrBefore(t,a1), d2=nearestOnOrBefore(t,a2);
+  out._p1=d1?priceAt(t,d1):null; out._p2=d2?priceAt(t,d2):null;
+  out.a1=d1?pct(eP,priceAt(t,d1)):null;
+  out.a2=d2?pct(eP,priceAt(t,d2)):null;
+  ROLL.forEach(r=>{const bd=nBack(t,eD,r.n); out[r.key]=bd?pct(eP,priceAt(t,bd)):null;});
+  return out;
+}
+function rowValues(item){
+  const t=item.ticker, mk=item.market;
+  const a=computeReturns(t), b=computeReturns(mk);
+  const v={_p1:a._p1,_p2:a._p2,_now:a._endP,abs:{},rel:{}};
+  ["a1","a2",...ROLL.map(r=>r.key)].forEach(k=>{
+    v.abs[k]=a[k];
+    v.rel[k]=(a[k]==null||b[k]==null)?null:Math.round((a[k]-b[k])*10)/10;
+  });
+  return v;
+}
+function benchValues(mk){const a=computeReturns(mk);
+  const v={_p1:a._p1,_p2:a._p2,_now:a._endP,abs:{},rel:{}};
+  ["a1","a2",...ROLL.map(r=>r.key)].forEach(k=>{v.abs[k]=a[k];v.rel[k]=0;});
+  return v;}
+
+function visibleItems(){return DB.universe.filter(s=>
+  (state.mkt==="all"||s.market===state.mkt) && (state.sector==="all"||s.sector===state.sector));}
+function fmt(v){return v==null?"–":(v>0?"+":"")+v.toFixed(1)+"%";}
+function fmtP(v){return v==null?"–":Math.round(v).toLocaleString("ko-KR");}
+function mkB(m){return m==="KOSPI"?'<span class="mk k">코스피</span>':'<span class="mk q">코스닥</span>';}
+function mkColor(m){return m==="KOSPI"?'background:#eef2ff;color:#3949ab':'background:#fff3e0;color:#b45309';}
+
+function maxAbs(rows,key){let m=0;rows.forEach(r=>{const v=r.vals[state.mode][key];if(v!=null&&Math.abs(v)>m)m=Math.abs(v);});return m||1;}
+function cellBg(v,mx){if(v==null||v===0)return"transparent";const a=Math.min(Math.abs(v)/mx,1)*.82+.04;
+  return v>0?`rgba(var(--up),${a.toFixed(3)})`:`rgba(var(--down),${a.toFixed(3)})`;}
+function avg(arr){const v=arr.filter(x=>x!=null);return v.length?v.reduce((a,b)=>a+b,0)/v.length:null;}
+
+function render(){
+  if(!DB)return;
+  const items=visibleItems().map(it=>({it,vals:rowValues(it)}));
+  const mxs={};COLS.forEach(c=>mxs[c.key]=maxAbs(items,c.key));
+  const a1l=document.getElementById("a1").value.slice(5).replace("-","/");
+  const a2l=document.getElementById("a2").value.slice(5).replace("-","/");
+
+  // head
+  let h='<th class="name">종목</th>';
+  if(state.showPrice)h+=`<th>가격①<div class="tkr">${a1l}</div></th><th>가격②<div class="tkr">${a2l}</div></th><th class="nowc sep">현재가</th>`;
+  COLS.forEach(c=>{const ar=state.sortKey===c.key?`<span class="arrow">${state.sortDir<0?"▼":"▲"}</span>`:"";
+    const cls=(c.anc?c.anc+" anc ":"")+(c.sep?"sep":"");
+    h+=`<th data-k="${c.key}" class="${cls}">${c.label}${ar}</th>`;});
+
+  let b="";
+  const colspan = 1 + (state.showPrice?3:0) + COLS.length;
+
+  // 지수(벤치) 행 — 항상 위에
+  (state.mkt==="all"?["KOSPI","KOSDAQ"]:[state.mkt]).forEach(mk=>{
+    const bd=DB.benchmarks.find(x=>x.ticker===mk); if(!bd)return;
+    const v=benchValues(mk);
+    let r=`<td class="name"><b>${bd.name}</b><span class="tag">기준</span></td>`;
+    if(state.showPrice)r+=`<td class="price">${fmtP(v._p1)}</td><td class="price">${fmtP(v._p2)}</td><td class="price nowc sep">${fmtP(v._now)}</td>`;
+    COLS.forEach(c=>{r+=`<td class="${c.sep?'sep':''}">${fmt(v[state.mode][c.key])}</td>`;});
+    b+=`<tr class="bm">${r}</tr>`;
+  });
+
+  function rowHTML(row,rank){
+    const it=row.it,v=row.vals;
+    let r=`<td class="name"><b><span class="rank">${rank}</span>${it.name}</b>${mkB(it.market)}<span class="sct">${it.sector}</span><div class="tkr">${it.ticker}</div></td>`;
+    if(state.showPrice)r+=`<td class="price">${fmtP(v._p1)}</td><td class="price">${fmtP(v._p2)}</td><td class="price nowc sep">${fmtP(v._now)}</td>`;
+    COLS.forEach(c=>{const val=v[state.mode][c.key];r+=`<td class="${c.sep?'sep':''}" style="background:${cellBg(val,mxs[c.key])}">${fmt(val)}</td>`;});
+    return `<tr>${r}</tr>`;
+  }
+
+  if(state.groupBy==="none"){
+    const sorted=[...items].sort((x,y)=>{const a=x.vals[state.mode][state.sortKey],bb=y.vals[state.mode][state.sortKey];
+      if(a==null)return 1;if(bb==null)return -1;return (a-bb)*state.sortDir;});
+    sorted.forEach((row,i)=>b+=rowHTML(row,i+1));
+  } else {
+    // 그룹 = 시장 · 섹터
+    const groups={};
+    items.forEach(row=>{const key=row.it.market+" · "+row.it.sector;(groups[key]=groups[key]||[]).push(row);});
+    // 그룹 정렬: 그룹 평균(현재 정렬 컬럼) 높은 순
+    const groupKeys=Object.keys(groups).sort((ka,kb)=>{
+      const ma=avg(groups[ka].map(r=>r.vals[state.mode][state.sortKey]));
+      const mb=avg(groups[kb].map(r=>r.vals[state.mode][state.sortKey]));
+      return (mb??-1e9)-(ma??-1e9);
+    });
+    groupKeys.forEach(gk=>{
+      const rows=groups[gk];
+      const mkt=rows[0].it.market, sector=rows[0].it.sector;
+      const isCol=state.collapsed[gk];
+      // 그룹 헤더
+      let gh=`<td class="name"><span class="caret">${isCol?'▸':'▾'}</span><span class="gmk" style="${mkColor(mkt)}">${mkt==="KOSPI"?"코스피":"코스닥"}</span>${sector}<span class="gcount">${rows.length}종목</span></td>`;
+      if(state.showPrice)gh+=`<td></td><td></td><td class="sep"></td>`;
+      COLS.forEach(c=>{const gv=avg(rows.map(r=>r.vals[state.mode][c.key]));
+        const col=gv==null?'':(gv>0?'color:rgb(var(--up))':gv<0?'color:rgb(var(--down))':'');
+        gh+=`<td class="${c.sep?'sep':''}" style="${col}">${gv==null?'–':(gv>0?'+':'')+gv.toFixed(1)+'%'}</td>`;});
+      b+=`<tr class="grphead" data-gk="${gk}">${gh}</tr>`;
+      // 그룹 내 종목 (정렬)
+      if(!isCol){
+        const sorted=[...rows].sort((x,y)=>{const a=x.vals[state.mode][state.sortKey],bb=y.vals[state.mode][state.sortKey];
+          if(a==null)return 1;if(bb==null)return -1;return (a-bb)*state.sortDir;});
+        sorted.forEach((row,i)=>b+=rowHTML(row,i+1));
+      }
+    });
+  }
+
+  document.getElementById("mount").innerHTML=`<div class="card"><div class="scroll"><table><thead><tr>${h}</tr></thead><tbody>${b}</tbody></table></div></div>`;
+  document.querySelectorAll("#mount th[data-k]").forEach(th=>th.onclick=()=>{
+    const k=th.dataset.k;if(state.sortKey===k)state.sortDir*=-1;else{state.sortKey=k;state.sortDir=-1;}render();});
+  document.querySelectorAll("#mount tr.grphead").forEach(tr=>tr.onclick=()=>{
+    const gk=tr.dataset.gk;state.collapsed[gk]=!state.collapsed[gk];render();});
+}
+
+function bind(id,attr,fn){document.getElementById(id).onclick=e=>{const val=e.target.dataset[attr];if(val===undefined)return;
+  fn(val);document.querySelectorAll(`#${id} button`).forEach(x=>x.classList.toggle("on",x===e.target));render();};}
+
+async function init(){
+  try{
+    const res=await fetch("data.json"); if(!res.ok)throw new Error("data.json 못 읽음 ("+res.status+")");
+    DB=await res.json();
+  }catch(err){
+    document.getElementById("mount").innerHTML=`<div class="err"><b>데이터 로딩 실패:</b> ${err.message}<br>
+    이 파일은 data.json과 같은 폴더에 두고 <b>로컬 서버</b>로 열어야 합니다. 예) <code>python3 -m http.server</code> 후 <code>localhost:8000</code></div>`;
+    document.getElementById("sub").textContent="데이터 로딩 실패";return;
+  }
+  // 섹터 필터 버튼 동적 생성
+  const sectors=[...new Set(DB.universe.map(s=>s.sector))];
+  const segS=document.getElementById("sector");
+  sectors.forEach(sc=>{const btn=document.createElement("button");btn.dataset.sector=sc;btn.textContent=sc;segS.appendChild(btn);});
+
+  const allDates=Object.values(DB.prices).flatMap(p=>Object.keys(p));
+  const minD=allDates.sort()[0], maxD=allDates.sort()[allDates.length-1];
+  const a1=document.getElementById("a1"), a2=document.getElementById("a2"), ep=document.getElementById("endpick");
+  a1.min=a2.min=ep.min=minD; a1.max=a2.max=ep.max=maxD;
+  a1.value="2026-04-30"; a2.value="2026-05-20"; ep.value=maxD;
+  document.getElementById("sub").textContent=`실데이터 ${minD} ~ ${maxD} · ${DB.universe.length}종목 · 섹터별 그룹 · 끝점·구간 바꾸면 즉석 재계산`;
+  [a1,a2,ep].forEach(el=>el.onchange=render);
+  bind("mkt","mkt",v=>state.mkt=v);
+  bind("sector","sector",v=>state.sector=v);
+  bind("mode","mode",v=>state.mode=v);
+  bind("price","price",v=>state.showPrice=(v==="on"));
+  bind("groupby","grp",v=>state.groupBy=v);
+  bind("endmode","end",v=>{state.endMode=v;ep.style.display=(v==="pick")?"inline-block":"none";});
+  render();
+}
+init();
+</script>
+</body>
+</html>
