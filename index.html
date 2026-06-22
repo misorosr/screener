@@ -60,6 +60,7 @@
   .legend{display:flex;gap:15px;margin-top:12px;font-size:11.5px;color:var(--ink2);flex-wrap:wrap;}
   .sw{display:inline-block;width:13px;height:13px;border-radius:3px;vertical-align:-2px;margin-right:5px;}
   .note{font-size:11px;color:#9096a1;margin-top:16px;line-height:1.6;border-top:1px solid var(--line);padding-top:12px;}
+  .broken{background:#fff8e6;border:1px solid #f0dca0;color:#8a6d1a;padding:11px 14px;border-radius:10px;font-size:12.5px;margin-top:12px;line-height:1.5;}
   .err{background:#fff4f4;border:1px solid #f3c9c9;color:#b42424;padding:14px;border-radius:10px;font-size:13px;margin:14px 0;}
 </style>
 </head>
@@ -115,15 +116,19 @@ function priceAt(t,d){return DB.prices[t][d];}
 function nearestOnOrBefore(t,target){const ds=datesOf(t);let r=null;for(const d of ds){if(d<=target)r=d;}return r;}
 function nBack(t,endD,n){const ds=datesOf(t);const i=ds.indexOf(endD);const j=i-n;return j>=0?ds[j]:null;}
 
+function valid(v){return v!=null && isFinite(v) && v>0;}  // 유효한 가격만
 function computeReturns(t){
   const a1=document.getElementById("a1").value, a2=document.getElementById("a2").value;
   const eD=endDate(t); const eP=priceAt(t,eD);
-  const out={_end:eD,_endP:eP,_p1:null,_p2:null};
+  const out={_end:eD,_endP:valid(eP)?eP:null,_p1:null,_p2:null};
+  if(!valid(eP)) return out;   // 끝점 가격이 없으면 계산 불가 → 전부 null
   const d1=nearestOnOrBefore(t,a1), d2=nearestOnOrBefore(t,a2);
-  out._p1=d1?priceAt(t,d1):null; out._p2=d2?priceAt(t,d2):null;
-  out.a1=d1?pct(eP,priceAt(t,d1)):null;
-  out.a2=d2?pct(eP,priceAt(t,d2)):null;
-  ROLL.forEach(r=>{const bd=nBack(t,eD,r.n); out[r.key]=bd?pct(eP,priceAt(t,bd)):null;});
+  const p1=d1?priceAt(t,d1):null, p2=d2?priceAt(t,d2):null;
+  out._p1=valid(p1)?p1:null; out._p2=valid(p2)?p2:null;
+  out.a1=valid(p1)?pct(eP,p1):null;
+  out.a2=valid(p2)?pct(eP,p2):null;
+  ROLL.forEach(r=>{const bd=nBack(t,eD,r.n); const bp=bd?priceAt(t,bd):null;
+    out[r.key]=valid(bp)?pct(eP,bp):null;});
   return out;
 }
 function rowValues(item){
@@ -155,7 +160,15 @@ function avg(arr){const v=arr.filter(x=>x!=null);return v.length?v.reduce((a,b)=
 
 function render(){
   if(!DB)return;
-  const items=visibleItems().map(it=>({it,vals:rowValues(it)}));
+  const broken=[];
+  const items=visibleItems().map(it=>{
+    try{ return {it,vals:rowValues(it)}; }
+    catch(e){ broken.push(it); return null; }
+  }).filter(x=>x!=null)
+    .filter(x=>{ // 가격이 아예 없으면 깨진 걸로 분류
+      if(x.vals && x.vals._now!=null) return true;
+      broken.push(x.it); return false;
+    });
   const mxs={};COLS.forEach(c=>mxs[c.key]=maxAbs(items,c.key));
   const a1l=document.getElementById("a1").value.slice(5).replace("-","/");
   const a2l=document.getElementById("a2").value.slice(5).replace("-","/");
@@ -222,7 +235,12 @@ function render(){
     });
   }
 
-  document.getElementById("mount").innerHTML=`<div class="card"><div class="scroll"><table><thead><tr>${h}</tr></thead><tbody>${b}</tbody></table></div></div>`;
+  let brokenHtml="";
+  if(broken.length){
+    const names=broken.map(it=>`${it.name}(${it.ticker})`).join(", ");
+    brokenHtml=`<div class="broken">⚠️ 데이터가 부족해 표시하지 못한 종목: <b>${names}</b><br><span style="font-size:11px;color:#9096a1">최근 상장·분할·거래정지 등으로 가격 데이터가 충분치 않을 수 있어요. 나머지 종목은 정상 표시됩니다.</span></div>`;
+  }
+  document.getElementById("mount").innerHTML=`<div class="card"><div class="scroll"><table><thead><tr>${h}</tr></thead><tbody>${b}</tbody></table></div></div>${brokenHtml}`;
   document.querySelectorAll("#mount th[data-k]").forEach(th=>th.onclick=()=>{
     const k=th.dataset.k;if(state.sortKey===k)state.sortDir*=-1;else{state.sortKey=k;state.sortDir=-1;}render();});
   document.querySelectorAll("#mount tr.grphead").forEach(tr=>tr.onclick=()=>{
