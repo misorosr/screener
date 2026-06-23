@@ -194,11 +194,14 @@ function render(){
   });
 
   function rowHTML(row,rank){
-    const it=row.it,v=row.vals;
-    let r=`<td class="name"><b><span class="rank">${rank}</span>${it.name}</b>${mkB(it.market)}<span class="sct">${it.sector}</span><div class="tkr">${it.ticker}</div></td>`;
-    if(state.showPrice)r+=`<td class="price">${fmtP(v._p1)}</td><td class="price">${fmtP(v._p2)}</td><td class="price nowc sep">${fmtP(v._now)}</td>`;
-    COLS.forEach(c=>{const val=v[state.mode][c.key];r+=`<td class="${c.sep?'sep':''}" style="background:${cellBg(val,mxs[c.key])}">${fmt(val)}</td>`;});
-    return `<tr>${r}</tr>`;
+    try{
+      const it=row.it,v=row.vals;
+      const mk = (it.market==="KOSPI")?'<span class="mk k">코스피</span>':(it.market==="KOSDAQ")?'<span class="mk q">코스닥</span>':`<span class="mk q">${it.market||"-"}</span>`;
+      let r=`<td class="name"><b><span class="rank">${rank}</span>${it.name||it.ticker}</b>${mk}<span class="sct">${it.sector||""}</span><div class="tkr">${it.ticker}</div></td>`;
+      if(state.showPrice)r+=`<td class="price">${fmtP(v._p1)}</td><td class="price">${fmtP(v._p2)}</td><td class="price nowc sep">${fmtP(v._now)}</td>`;
+      COLS.forEach(c=>{const val=v[state.mode]?v[state.mode][c.key]:null;r+=`<td class="${c.sep?'sep':''}" style="background:${cellBg(val,mxs[c.key])}">${fmt(val)}</td>`;});
+      return `<tr>${r}</tr>`;
+    }catch(e){ return ""; }  // 한 종목 렌더 실패해도 빈 줄 반환, 전체는 계속
   }
 
   if(state.groupBy==="none"){
