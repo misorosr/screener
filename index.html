@@ -77,7 +77,7 @@
       <input type="date" id="a2" class="bchip-d"></div>
     <div class="grp"><span class="lbl">끝점 (현재가)</span>
       <div class="row"><div class="seg" id="endmode"><button data-end="last" class="on">최근</button><button data-end="pick">특정일</button></div>
-      <input type="date" id="endpick" style="display:none}"></div></div>
+      <input type="date" id="endpick" style="display:none"></div></div>
     <div class="grp"><span class="lbl">시장</span>
       <div class="seg" id="mkt"><button data-mkt="all" class="on">전체</button><button data-mkt="KOSPI">코스피</button><button data-mkt="KOSDAQ">코스닥</button></div></div>
     <div class="grp"><span class="lbl">섹터</span>
@@ -97,7 +97,7 @@
     <span><span class="sw" style="background:rgba(37,99,235,.7)"></span>하락 / 부진</span>
     <span>· 헤더 클릭 = 정렬 · 그룹 헤더 클릭 = 접기 · 끝점·구간일 바꾸면 즉석 재계산</span>
   </div>
-  <p class="note">※ 섹터별로 묶어 보기. 그룹 헤더의 값은 그 섹터 종목들의 <b>평균</b>입니다(섹터 자체의 강도). 종목은 그룹 안에서 정렬됩니다. 상대강도 = 종목 − 자기 시장 지수. 거래일 기준(주말·휴장 자동 건너뜀).</p>
+  <p class="note">※ 섹터별로 묶어 보기. 그룹 헤더의 값은 그 섹터 종목들의 <b>평균</b>입니다(섹터 자체의 강도). 종목은 그룹 안에서 정렬됩니다. 상대강도 = 종목 − 자기 시장 지수. 거래일 기준(주말·휴장 자동 건너뜜).</p>
 </div>
 
 <script>
@@ -108,7 +108,6 @@ let DB=null, state={mkt:"all",sector:"all",mode:"abs",showPrice:true,sortKey:"a1
 
 function pct(e,s){return Math.round((e-s)/s*1000)/10;}
 
-// [수정] 특정 티커의 날짜 배열을 안전하게 가져오도록 방어
 function datesOf(t){
   if(!DB || !DB.prices || !DB.prices[t]) return [];
   return Object.keys(DB.prices[t]).sort();
@@ -199,7 +198,7 @@ function render(){
   let b="";
 
   (state.mkt==="all"?["KOSPI","KOSDAQ"]: [state.mkt]).forEach(mk=>{
-    if(!DB.prices[mk]) return; // 지수 데이터가 없을 때 팅김 방지
+    if(!DB.prices[mk]) return;
     const v=benchValues(mk);
     let name = mk === "KOSPI" ? "코스피 지수" : "코스닥 지수";
     let r=`<td class="name"><b>${name}</b><span class="tag">기준</span></td>`;
@@ -279,7 +278,6 @@ async function init(){
   const selS=document.getElementById("sector");
   sectors.forEach(sc=>{const op=document.createElement("option");op.value=sc;op.textContent=sc;selS.appendChild(op);});
 
-  // 날짜 파싱 안정화
   const allDates=[...new Set(Object.values(DB.prices).flatMap(p=>Object.keys(p)))].sort();
   if(!allDates.length) { document.getElementById("sub").textContent="주가 데이터 내 날짜가 없습니다."; return; }
   
@@ -287,7 +285,6 @@ async function init(){
   const a1=document.getElementById("a1"), a2=document.getElementById("a2"), ep=document.getElementById("endpick");
   a1.min=a2.min=ep.min=minD; a1.max=a2.max=ep.max=maxD;
   
-  // 데이터 실제 범위에 연동하여 기본값 셋팅
   a1.value=allDates[Math.max(0, allDates.length - 23)] || minD; 
   a2.value=allDates[Math.max(0, allDates.length - 5)] || minD;
   ep.value=maxD;
