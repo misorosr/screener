@@ -219,17 +219,31 @@ def build(universe, prices):
             "sector": u["sector"],
         })
     price_out = {}
+    dropped = []   # 가격을 못 받은 종목 (화면에 경고로 표시됨)
     for u in universe:
-        if u["ticker"] in prices:
-            price_out[u["ticker"]] = prices[u["ticker"]]
+        t = u["ticker"]
+        if u["asset"] != "주식":
+            continue
+        # 가격이 있고, 유효한 값이 충분한지 확인
+        ser = prices.get(t)
+        n_valid = 0
+        if ser:
+            n_valid = sum(1 for v in ser.values() if v is not None and v > 0)
+        if n_valid >= 2:           # 최소 2개 유효 가격이 있어야 등락률 계산 가능
+            price_out[t] = ser
+        else:
+            dropped.append({"ticker": t, "name": u["name"], "reason": "가격 데이터 부족"})
     for mk in markets:
         key = market_map.get(mk, mk)
         if mk in prices:
             price_out[key] = prices[mk]
             bench_out.append({"ticker": key, "name": INDEX_NAME[mk], "market": key})
+    if dropped:
+        print("  ⚠ 가격 못 받은 종목:", ", ".join(f"{d['name']}({d['ticker']})" for d in dropped))
     return {
         "meta": {"generated": datetime.today().strftime("%Y-%m-%d"), "source": "notion+pykrx"},
         "universe": uni_out, "benchmarks": bench_out, "prices": price_out,
+        "dropped": dropped,
     }
 
 
