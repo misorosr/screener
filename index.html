@@ -108,7 +108,7 @@ const COLS=[{label:"구간①",key:"a1",anc:"hA",sep:1},{label:"구간②",key:"
   {label:"1일",key:"d1",sep:1},{label:"1주",key:"w1"},{label:"2주",key:"w2"},{label:"1달",key:"M1"}];
 let DB=null, state={mkt:"all",sector:"all",mode:"abs",showPrice:true,sortKey:"a1",sortDir:-1,endMode:"last",groupBy:"sector",collapsed:{}};
 
-function pct(e,s){return Math.round((e-s)/s*1000)/10;}
+function pct(e,s){return Math.round((e-s)/s*10000)/100;}
 function datesOf(t){return Object.keys(DB.prices[t]).sort();}
 function endDate(t){const ds=datesOf(t); if(state.endMode==="last")return ds[ds.length-1];
   const pick=document.getElementById("endpick").value; let r=null; for(const d of ds){ if(d<=pick)r=d; } return r||ds[ds.length-1];}
@@ -137,7 +137,7 @@ function rowValues(item){
   const v={_p1:a._p1,_p2:a._p2,_now:a._endP,abs:{},rel:{}};
   ["a1","a2",...ROLL.map(r=>r.key)].forEach(k=>{
     v.abs[k]=a[k];
-    v.rel[k]=(a[k]==null||b[k]==null)?null:Math.round((a[k]-b[k])*10)/10;
+    v.rel[k]=(a[k]==null||b[k]==null)?null:Math.round((a[k]-b[k])*100)/100;
   });
   return v;
 }
@@ -148,7 +148,7 @@ function benchValues(mk){const a=computeReturns(mk);
 
 function visibleItems(){return DB.universe.filter(s=>
   (state.mkt==="all"||s.market===state.mkt) && (state.sector==="all"||s.sector===state.sector));}
-function fmt(v){return v==null?"–":(v>0?"+":"")+v.toFixed(1)+"%";}
+function fmt(v){return v==null?"–":(v>0?"+":"")+v.toFixed(2)+"%";}
 function fmtP(v){return v==null?"–":Math.round(v).toLocaleString("ko-KR");}
 function mkB(m){return m==="KOSPI"?'<span class="mk k">코스피</span>':'<span class="mk q">코스닥</span>';}
 function mkColor(m){return m==="KOSPI"?'background:#eef2ff;color:#3949ab':'background:#fff3e0;color:#b45309';}
@@ -227,7 +227,7 @@ function render(){
       if(state.showPrice)gh+=`<td></td><td></td><td class="sep"></td>`;
       COLS.forEach(c=>{const gv=avg(rows.map(r=>r.vals[state.mode][c.key]));
         const col=gv==null?'':(gv>0?'color:rgb(var(--up))':gv<0?'color:rgb(var(--down))':'');
-        gh+=`<td class="${c.sep?'sep':''}" style="${col}">${gv==null?'–':(gv>0?'+':'')+gv.toFixed(1)+'%'}</td>`;});
+        gh+=`<td class="${c.sep?'sep':''}" style="${col}">${gv==null?'–':(gv>0?'+':'')+gv.toFixed(2)+'%'}</td>`;});
       b+=`<tr class="grphead" data-gk="${gk}">${gh}</tr>`;
       // 그룹 내 종목 (정렬)
       if(!isCol){
