@@ -3,361 +3,292 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>상대강도 스크리너 (최종 안정화 버전)</title>
+<title>상대강도 스크리너</title>
 <style>
-  :root {
-    --ink: #16181d;
-    --ink2: #3a3f4a;
-    --line: #e3e4e8;
-    --bg: #f3f4f6;
-    --card: #fff;
-    --up: 220,38,38;
-    --down: 37,99,235;
-    --gold: #b08200;
-  }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0; background: var(--bg); color: var(--ink);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", Roboto, sans-serif;
-    -webkit-font-smoothing: antialiased;
-  }
-  .wrap { max-width: 1080px; margin: 0 auto; padding: 18px 14px 60px; }
-  .top { border-bottom: 2px solid var(--ink); padding-bottom: 12px; margin-bottom: 14px; }
-  .eyebrow { font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: var(--gold); font-weight: 700; }
-  h1 { font-size: 22px; margin: 6px 0 0; font-weight: 800; letter-spacing: -.01em; }
-  .sub { font-size: 13px; color: var(--ink2); margin: 6px 0 0; }
-  
-  .ctrl-panel {
-    background: var(--card); border: 1px solid var(--line); border-radius: 6px;
-    padding: 14px; margin-bottom: 16px; font-size: 13px; line-height: 1.5;
-  }
-  .ctrl-row { margin-bottom: 10px; }
-  .ctrl-row:last-child { margin-bottom: 0; }
-  .ctrl-label { font-weight: 700; display: inline-block; width: 80px; color: var(--ink2); }
-  
-  label { margin-right: 14px; cursor: pointer; display: inline-flex; align-items: center; }
-  input[type="radio"], input[type="checkbox"] { margin-right: 4px; accent-color: var(--ink); }
-  select, input[type="date"] {
-    padding: 4px 8px; border: 1px solid var(--line); border-radius: 4px;
-    background: var(--card); font-size: 13px; color: var(--ink); margin-right: 10px;
-  }
-  
-  .table-wrap {
-    background: var(--card); border: 1px solid var(--line); border-radius: 6px;
-    overflow-x: auto; -webkit-overflow-scrolling: touch;
-  }
-  table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; min-width: 820px; }
-  th {
-    background: #fafafa; border-bottom: 2px solid var(--line); padding: 10px 12px;
-    font-weight: 700; color: var(--ink2); cursor: pointer; user-select: none;
-  }
-  th:hover { background: #f0f0f0; }
-  td { padding: 8px 12px; border-bottom: 1px solid var(--line); vertical-align: middle; }
-  
-  .grp-hd { background: #f9fafb; font-weight: 700; color: var(--ink); }
-  .grp-hd td { border-bottom: 2px solid var(--line); padding-top: 12px; padding-bottom: 12px; }
-  
-  .num { font-variant-numeric: tabular-nums; text-align: right; }
-  th.num { text-align: right; }
-  
-  .badge {
-    display: inline-block; padding: 2px 6px; font-size: 11px; font-weight: 600;
-    border-radius: 4px; text-transform: uppercase;
-  }
-  .badge.kospi { background: #e0f2fe; color: #0369a1; }
-  .badge.kosdaq { background: #fef3c7; color: #b45309; }
-  
-  .val-up { color: rgb(var(--up)); font-weight: 600; }
-  .val-down { color: rgb(var(--down)); font-weight: 600; }
-  .val-flat { color: var(--ink2); }
-  
-  .err { padding: 20px; color: rgb(var(--up)); background: #fef2f2; border: 1px solid #fca5a5; border-radius: 6px; margin: 20px 0; }
+  :root{--ink:#16181d;--ink2:#3a3f4a;--line:#e3e4e8;--bg:#f3f4f6;--card:#fff;
+    --up:220,38,38;--down:37,99,235;--gold:#b08200;}
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo","Noto Sans KR",Roboto,sans-serif;-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:1080px;margin:0 auto;padding:18px 14px 60px;}
+  .top{border-bottom:2px solid var(--ink);padding-bottom:12px;margin-bottom:14px;}
+  .eyebrow{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);font-weight:700;}
+  h1{font-size:22px;margin:6px 0 0;font-weight:800;letter-spacing:-.01em;}
+  .sub{font-size:12px;color:var(--ink2);margin-top:6px;line-height:1.5;}
+  .controls{display:flex;flex-wrap:wrap;gap:13px 16px;align-items:flex-start;margin:15px 0 13px;}
+  .grp{display:flex;flex-direction:column;gap:5px;}
+  .lbl{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink2);font-weight:700;}
+  .seg{display:inline-flex;background:#e7e8ec;border-radius:9px;padding:3px;flex-wrap:wrap;}
+  .seg button{border:0;background:transparent;font:inherit;font-size:13px;font-weight:600;color:var(--ink2);
+    padding:7px 13px;border-radius:7px;cursor:pointer;transition:.15s;white-space:nowrap;}
+  .seg button.on{background:var(--ink);color:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);}
+  input[type=date]{font:inherit;font-size:12.5px;font-weight:600;border:1px solid var(--line);border-radius:8px;padding:6px 8px;color:var(--ink);background:#fff;}
+  select.din,select#sector{font:inherit;font-size:13px;font-weight:600;border:1px solid var(--line);border-radius:9px;padding:7px 30px 7px 12px;color:var(--ink);background:#fff;cursor:pointer;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns=%27http://www.w3.org/2000/svg%27 width=%2712%27 height=%2712%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%233a3f4a%27 stroke-width=%272.5%27><path d=%27M6 9l6 6 6-6%27/></svg>");background-repeat:no-repeat;background-position:right 10px center;min-width:120px;}
+  .achip-d{border-left:3px solid rgb(var(--up));} .bchip-d{border-left:3px solid rgb(var(--down));}
+  .row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 1px 2px rgba(0,0,0,.04);}
+  .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:14px;}
+  table{border-collapse:separate;border-spacing:0;width:100%;font-size:13px;font-variant-numeric:tabular-nums;min-width:820px;}
+  th,td{padding:11px 8px;text-align:right;white-space:nowrap;}
+  thead th{position:sticky;top:0;background:#fafafb;font-size:11px;font-weight:700;color:var(--ink2);
+    border-bottom:1px solid var(--line);cursor:pointer;user-select:none;z-index:3;vertical-align:bottom;}
+  thead th:hover{color:var(--ink);}
+  th.name,td.name{text-align:left;position:sticky;left:0;background:var(--card);z-index:2;min-width:160px;border-right:1px solid var(--line);}
+  thead th.name{z-index:4;background:#fafafb;cursor:default;}
+  th.hA{color:rgb(var(--up));} th.hB{color:rgb(var(--down));}
+  th.anc{border-bottom:2px solid currentColor;} td.sep,th.sep{border-right:2px solid var(--line);}
+  td.price{color:var(--ink2);} td.nowc,th.nowc{font-weight:800;color:var(--ink);}
+  .tkr{font-size:10.5px;color:#9096a1;font-weight:500;margin-top:2px;}
+  td.name b{font-weight:700;font-size:13.5px;}
+  .rank{display:inline-block;width:15px;color:#9096a1;font-size:11px;margin-right:3px;}
+  .mk{display:inline-block;font-size:9px;font-weight:800;padding:1px 5px;border-radius:4px;margin-left:5px;vertical-align:1.5px;}
+  .mk.k{background:#eef2ff;color:#3949ab;} .mk.q{background:#fff3e0;color:#b45309;}
+  .sct{display:inline-block;font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px;margin-left:4px;vertical-align:1.5px;background:#eef7f0;color:#1f7a44;}
+  tbody tr:hover td{filter:brightness(.97);}
+  tr.grphead td{background:#eceef2;font-weight:800;font-size:12px;color:var(--ink);
+    border-top:2px solid #d6d9df;border-bottom:1px solid #d6d9df;cursor:pointer;}
+  tr.grphead td.name{background:#eceef2;}
+  tr.grphead .gmk{font-size:9px;font-weight:800;padding:1px 6px;border-radius:4px;margin-right:6px;}
+  tr.grphead .gcount{font-size:10px;color:#7c828e;font-weight:600;margin-left:6px;}
+  tr.grphead .caret{display:inline-block;width:12px;color:#9096a1;font-size:10px;}
+  tr.bm td{background:#1b1d23!important;color:#fff;font-weight:700;}
+  tr.bm td.name{background:#1b1d23!important;color:#fff;} tr.bm td.name b{color:#fff;} tr.bm td.nowc{color:#fff;}
+  tr.bm .tag{font-size:9px;color:#c9cdd6;margin-left:6px;border:1px solid #4a4f5c;border-radius:4px;padding:1px 5px;}
+  .arrow{font-size:9px;color:var(--gold);margin-left:3px;}
+  .legend{display:flex;gap:15px;margin-top:12px;font-size:11.5px;color:var(--ink2);flex-wrap:wrap;}
+  .sw{display:inline-block;width:13px;height:13px;border-radius:3px;vertical-align:-2px;margin-right:5px;}
+  .note{font-size:11px;color:#9096a1;margin-top:16px;line-height:1.6;border-top:1px solid var(--line);padding-top:12px;}
+  .broken{background:#fff8e6;border:1px solid #f0dca0;color:#8a6d1a;padding:11px 14px;border-radius:10px;font-size:12.5px;margin-top:12px;line-height:1.5;}
+  .err{background:#fff4f4;border:1px solid #f3c9c9;color:#b42424;padding:14px;border-radius:10px;font-size:13px;margin:14px 0;}
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="eyebrow">Alpha Screener Tool</div>
-    <h1>상대강도 스크리너</h1>
-    <div class="sub" id="sub">데이터를 불러오는 중입니다...</div>
+    <div class="eyebrow">상대강도 스크리너 · 그룹 보기</div>
+    <h1>시장·섹터별 등락률 / 지수 대비 강도</h1>
+    <p class="sub" id="sub">data.json 로딩 중…</p>
   </div>
 
-  <div class="ctrl-panel">
-    <div class="ctrl-row">
-      <span class="ctrl-label">시장/섹터</span>
-      <label><input type="radio" name="mkt" value="all" checked> 전체 시장</label>
-      <label><input type="radio" name="mkt" value="KOSPI"> KOSPI</label>
-      <label><input type="radio" name="mkt" value="KOSDAQ"> KOSDAQ</label>
-      <select id="sector"><option value="all">전체 섹터</option></select>
-    </div>
-    <div class="ctrl-row">
-      <span class="ctrl-label">분석 기준</span>
-      <label><input type="radio" name="mode" value="rs" checked> 지수대비 상대강도 (RS)</label>
-      <label><input type="radio" name="mode" value="abs"> 절대 등락률 (Absolute)</label>
-      <span style="margin-left:20px;" class="ctrl-label">그룹화</span>
-      <label><input type="radio" name="groupby" value="sector" checked> 섹터별 묶기</label>
-      <label><input type="radio" name="groupby" value="none"> 안 묶기 (전체 순위)</label>
-    </div>
-    <div class="ctrl-row">
-      <span class="ctrl-label">구간 설정</span>
-      <span style="color:var(--ink2);">구간 A:</span>
-      <input type="date" id="a1"> ~ <input type="date" id="a2">
-      <span style="margin-left:14px; color:var(--ink2);">기준 끝점:</span>
-      <label><input type="radio" name="endmode" value="latest" checked> 최신 데이터 기준</label>
-      <label><input type="radio" name="endmode" value="pick"> 특정일 지정</label>
-      <input type="date" id="endpick" style="display:none;">
-    </div>
-    <div class="ctrl-row">
-      <span class="ctrl-label">부가 기능</span>
-      <label><input type="checkbox" name="price" value="on"> 현재가 표시</label>
-    </div>
+  <div class="controls">
+    <div class="grp"><span class="lbl">구간① 시작</span>
+      <input type="date" id="a1" class="achip-d"></div>
+    <div class="grp"><span class="lbl">구간② 시작</span>
+      <input type="date" id="a2" class="bchip-d"></div>
+    <div class="grp"><span class="lbl">끝점 (현재가)</span>
+      <div class="row"><div class="seg" id="endmode"><button data-end="last" class="on">최근</button><button data-end="pick">특정일</button></div>
+      <input type="date" id="endpick" style="display:none"></div></div>
+    <div class="grp"><span class="lbl">시장</span>
+      <div class="seg" id="mkt"><button data-mkt="all" class="on">전체</button><button data-mkt="KOSPI">코스피</button><button data-mkt="KOSDAQ">코스닥</button></div></div>
+    <div class="grp"><span class="lbl">섹터</span>
+      <select id="sector" class="din"><option value="all">전체 섹터</option></select></div>
+    <div class="grp"><span class="lbl">보기</span>
+      <div class="seg" id="mode"><button data-mode="abs" class="on">등락률</button><button data-mode="rel">상대강도</button></div></div>
+    <div class="grp"><span class="lbl">묶기</span>
+      <div class="seg" id="groupby"><button data-grp="sector" class="on">섹터별</button><button data-grp="none">안 묶기</button></div></div>
+    <div class="grp"><span class="lbl">가격</span>
+      <div class="seg" id="price"><button data-price="on" class="on">표시</button><button data-price="off">숨김</button></div></div>
   </div>
 
-  <div class="table-wrap" id="mount">
-    <!-- 데이터 렌더링 영역 -->
+  <div id="mount"></div>
+
+  <div class="legend">
+    <span><span class="sw" style="background:rgba(220,38,38,.7)"></span>상승 / 초과</span>
+    <span><span class="sw" style="background:rgba(37,99,235,.7)"></span>하락 / 부진</span>
+    <span>· 헤더 클릭 = 정렬 · 그룹 헤더 클릭 = 접기 · 끝점·구간일 바꾸면 즉석 재계산</span>
   </div>
+  <p class="note">※ 섹터별로 묶어 보기. 그룹 헤더의 값은 그 섹터 종목들의 <b>평균</b>입니다(섹터 자체의 강도). 종목은 그룹 안에서 정렬됩니다. 상대강도 = 종목 − 자기 시장 지수. 거래일 기준(주말·휴장 자동 건너뜀).</p>
 </div>
 
 <script>
-let DB = null;
-const state = {
-  mkt: 'all',
-  sector: 'all',
-  mode: 'rs',
-  groupBy: 'sector',
-  endMode: 'latest',
-  showPrice: false,
-  sortKey: 'score', 
-  sortAsc: false
-};
+const ROLL=[{label:"1일",key:"d1",n:1},{label:"1주",key:"w1",n:5},{label:"2주",key:"w2",n:10},{label:"1달",key:"M1",n:22}];
+const COLS=[{label:"구간①",key:"a1",anc:"hA",sep:1},{label:"구간②",key:"a2",anc:"hB"},
+  {label:"1일",key:"d1",sep:1},{label:"1주",key:"w1"},{label:"2주",key:"w2"},{label:"1달",key:"M1"}];
+let DB=null, state={mkt:"all",sector:"all",mode:"abs",showPrice:true,sortKey:"a1",sortDir:-1,endMode:"last",groupBy:"sector",collapsed:{}};
 
-function bind(name, stateKey, cb) {
-  const elks = document.getElementsByName(name);
-  if(elks.length) {
-    elks.forEach(el => {
-      el.addEventListener('change', (e) => {
-        if(el.type === 'radio' && !el.checked) return;
-        cb(el.type === 'checkbox' ? el.checked : el.value);
-        render();
-      });
+function pct(e,s){return Math.round((e-s)/s*1000)/10;}
+function datesOf(t){return DB.prices[t] ? Object.keys(DB.prices[t]).sort() : [];}
+function endDate(t){
+  const ds=datesOf(t); if(!ds.length) return null;
+  if(state.endMode Pac==="last")return ds[ds.length-1];
+  const pick=document.getElementById("endpick").value; let r=null; for(const d of ds){ if(d<=pick)r=d; } return r||ds[ds.length-1];
+}
+function priceAt(t,d){return DB.prices[t] ? DB.prices[t][d] : null;}
+function nearestOnOrBefore(t,target){const ds=datesOf(t);let r=null;for(const d of ds){if(d<=target)r=d;}return r;}
+function nBack(t,endD,n){const ds=datesOf(t);const i=ds.indexOf(endD);const j=i-n;return j>=0?ds[j]:null;}
+
+function valid(v){return v!=null && isFinite(v) && v>0;}
+function computeReturns(t){
+  const a1=document.getElementById("a1").value, a2=document.getElementById("a2").value;
+  const eD=endDate(t); const eP=priceAt(t,eD);
+  const out={_end:eD,_endP:valid(eP)?eP:null,_p1:null,_p2:null};
+  if(!valid(eP)) return out;
+  const d1=nearestOnOrBefore(t,a1), d2=nearestOnOrBefore(t,a2);
+  const p1=d1?priceAt(t,d1):null, p2=d2?priceAt(t,d2):null;
+  out._p1=valid(p1)?p1:null; out._p2=valid(p2)?p2:null;
+  out.a1=valid(p1)?pct(eP,p1):null;
+  out.a2=valid(p2)?pct(eP,p2):null;
+  ROLL.forEach(r=>{const bd=nBack(t,eD,r.n); const bp=bd?priceAt(t,bd):null;
+    out[r.key]=valid(bp)?pct(eP,bp):null;});
+  return out;
+}
+function rowValues(item){
+  const t=item.ticker, mk=item.market;
+  const a=computeReturns(t), b=computeReturns(mk);
+  const v={_p1:a._p1,_p2:a._p2,_now:a._endP,abs:{},rel:{}};
+  ["a1","a2",...ROLL.map(r=>r.key)].forEach(k=>{
+    v.abs[k]=a[k];
+    v.rel[k]=(a[k]==null||b[k]==null)?null:Math.round((a[k]-b[k])*10)/10;
+  });
+  return v;
+}
+function benchValues(mk){
+  const a=computeReturns(mk);
+  const v={_p1:a._p1,_p2:a._p2,_now:a._endP,abs:{},rel:{}};
+  ["a1","a2",...ROLL.map(r=>r.key)].forEach(k=>{v.abs[k]=a[k];v.rel[k]=0;});
+  return v;
+}
+
+function visibleItems(){return DB.universe.filter(s=>
+  (state.mkt==="all"||s.market===state.mkt) && (state.sector==="all"||s.sector===state.sector));}
+function fmt(v){return v==null?"–":(v>0?"+":"")+v.toFixed(1)+"%";}
+function fmtP(v){return v==null?"–":Math.round(v).toLocaleString("ko-KR");}
+function mkColor(m){return m==="KOSPI"?'background:#eef2ff;color:#3949ab':'background:#fff3e0;color:#b45309';}
+
+function maxAbs(rows,key){let m=0;rows.forEach(r=>{const v=r.vals[state.mode][key];if(v!=null&&Math.abs(v)>m)m=Math.abs(v);});return m||1;}
+function cellBg(v,mx){if(v==null||v===0)return"transparent";const a=Math.min(Math.abs(v)/mx,1)*.82+.04;
+  return v>0?`rgba(var(--up),${a.toFixed(3)})`:`rgba(var(--down),${a.toFixed(3)})`;}
+function avg(arr){const v=arr.filter(x=>x!=null);return v.length?v.reduce((a,b)=>a+b,0)/v.length:null;}
+
+function render(){
+  if(!DB)return;
+  const broken=[];
+  const items=visibleItems().map(it=>{
+    try{ return {it,vals:rowValues(it)}; }
+    catch(e){ broken.push(it); return null; }
+  }).filter(x=>x!=null)
+    .filter(x=>{
+      if(x.vals && x.vals._now!=null) return true;
+      broken.push(x.it); return false;
+    });
+    
+  const mxs={};COLS.forEach(c=>mxs[c.key]=maxAbs(items,c.key));
+  const a1l=document.getElementById("a1").value.slice(5).replace("-","/");
+  const a2l=document.getElementById("a2").value.slice(5).replace("-","/");
+
+  let h='<th class="name">종목</th>';
+  if(state.showPrice)h+=`<th>가격①<div class="tkr">${a1l}</div></th><th>가격②<div class="tkr">${a2l}</div></th><th class="nowc sep">현재가</th>`;
+  COLS.forEach(c=>{const ar=state.sortKey===c.key?`<span class="arrow">${state.sortDir<0?"▼":"▲"}</span>`:"";
+    const cls=(c.anc?c.anc+" anc ":"")+(c.sep?"sep":"");
+    h+=`<th data-k="${c.key}" class="${cls}">${c.label}${ar}</th>`;});
+
+  let b="";
+
+  (state.mkt==="all"?["KOSPI","KOSDAQ"]:[state.mkt]).forEach(mk=>{
+    const bd=DB.benchmarks ? DB.benchmarks.find(x=>x.ticker===mk) : null; 
+    if(!bd) return;
+    const v=benchValues(mk);
+    let r=`<td class="name"><b>${bd.name}</b><span class="tag">기준</span></td>`;
+    if(state.showPrice)r+=`<td class="price">${fmtP(v._p1)}</td><td class="price">${fmtP(v._p2)}</td><td class="price nowc sep">${fmtP(v._now)}</td>`;
+    COLS.forEach(c=>{r+=`<td class="${c.sep?'sep':''}">${fmt(v[state.mode][c.key])}</td>`;});
+    b+=`<tr class="bm">${r}</tr>`;
+  });
+
+  function rowHTML(row,rank){
+    try{
+      const it=row.it,v=row.vals;
+      const mk = (it.market==="KOSPI")?'<span class="mk k">코스피</span>':(it.market==="KOSDAQ")?'<span class="mk q">코스닥</span>':`<span class="mk q">${it.market||"-"}</span>`;
+      let r=`<td class="name"><b><span class="rank">${rank}</span>${it.name||it.ticker}</b>${mk}<span class="sct">${it.sector||""}</span><div class="tkr">${it.ticker}</div></td>`;
+      if(state.showPrice)r+=`<td class="price">${fmtP(v._p1)}</td><td class="price">${fmtP(v._p2)}</td><td class="price nowc sep">${fmtP(v._now)}</td>`;
+      COLS.forEach(c=>{const val=v[state.mode]?v[state.mode][c.key]:null;r+=`<td class="${c.sep?'sep':''}" style="background:${cellBg(val,mxs[c.key])}">${fmt(val)}</td>`;});
+      return `<tr>${r}</tr>`;
+    }catch(e){ return ""; }
+  }
+
+  if(state.groupBy==="none"){
+    const sorted=[...items].sort((x,y)=>{const a=x.vals[state.mode][state.sortKey],bb=y.vals[state.mode][state.sortKey];
+      if(a==null)return 1;if(bb==null)return -1;return (a-bb)*state.sortDir;});
+    sorted.forEach((row,i)=>b+=rowHTML(row,i+1));
+  } else {
+    const groups={};
+    items.forEach(row=>{const key=row.it.market+" · "+row.it.sector;(groups[key]=groups[key]||[]).push(row);});
+    const groupKeys=Object.keys(groups).sort((ka,kb)=>{
+      const ma=avg(groups[ka].map(r=>r.vals[state.mode][state.sortKey]));
+      const mb=avg(groups[kb].map(r=>r.vals[state.mode][state.sortKey]));
+      return (mb??-1e9)-(ma??-1e9);
+    });
+    groupKeys.forEach(gk=>{
+      const rows=groups[gk];
+      const mkt=rows[0].it.market, sector=rows[0].it.sector;
+      const isCol=state.collapsed[gk];
+      let gh=`<td class="name"><span class="caret">${isCol?'▸':'▾'}</span><span class="gmk" style="${mkColor(mkt)}">${mkt==="KOSPI"?"코스피":"코스닥"}</span>${sector}<span class="gcount">${rows.length}종목</span></td>`;
+      if(state.showPrice)gh+=`<td></td><td></td><td class="sep"></td>`;
+      COLS.forEach(c=>{const gv=avg(rows.map(r=>r.vals[state.mode][c.key]));
+        const col=gv==null?'':(gv>0?'color:rgb(var(--up))':gv<0?'color:rgb(var(--down))':'');
+        gh+=`<td class="${c.sep?'sep':''}" style="${col}">${gv==null?'–':(gv>0?'+':'')+gv.toFixed(1)+'%'}</td>`;});
+      b+=`<tr class="grphead" data-gk="${gk}">${gh}</tr>`;
+      if(!isCol){
+        const sorted=[...rows].sort((x,y)=>{const a=x.vals[state.mode][state.sortKey],bb=y.vals[state.mode][state.sortKey];
+          if(a==null)return 1;if(bb==null)return -1;return (a-bb)*state.sortDir;});
+        sorted.forEach((row,i)=>b+=rowHTML(row,i+1));
+      }
     });
   }
-}
 
-function avg(arr) {
-  const v = arr.filter(x => x != null && !isNaN(x));
-  return v.length ? v.reduce((a, b) => a + b, 0) / v.length : 0;
-}
-
-function getReturn(prices, d1, d2) {
-  if(!prices || !prices[d1] || !prices[d2]) return null;
-  return ((prices[d2] - prices[d1]) / prices[d1]) * 100;
-}
-
-async function init() {
-  try {
-    const res = await fetch("data.json");
-    if(!res.ok) throw new Error("data.json 파일을 찾을 수 없습니다. (" + res.status + ")");
-    DB = await res.json();
-  } catch(err) {
-    document.getElementById("mount").innerHTML = `
-      <div class="err">
-        <b>데이터 로딩 실패:</b> ${err.message}<br>
-        이 파일은 <code>data.json</code>과 반드시 같은 폴더에 있어야 정상 작동합니다.
-      </div>`;
-    document.getElementById("sub").textContent = "데이터 로딩 실패";
-    return;
+  const dropList=(DB.dropped||[]).map(d=>`${d.name}(${d.ticker})`);
+  const brokenList=broken.map(it=>`${it.name}(${it.ticker})`);
+  const allBroken=[...new Set([...brokenList,...dropList])];
+  let brokenHtml="";
+  if(allBroken.length){
+    brokenHtml=`<div class="broken">⚠️ 데이터가 부족해 표시하지 못한 종목: <b>${allBroken.join(", ")}</b><br><span style="font-size:11px;color:#9096a1">최근 상장·거래정지 등으로 가격 데이터가 충분치 않을 수 있어요.</span></div>`;
   }
+  document.getElementById("mount").innerHTML=`<div class="card"><div class="scroll"><table><thead><tr>${h}</tr></thead><tbody>${b}</tbody></table></div></div>${brokenHtml}`;
+  document.querySelectorAll("#mount th[data-k]").forEach(th=>th.onclick=()=>{
+    const k=th.dataset.k;if(state.sortKey===k)state.sortDir*=-1;else{state.sortKey=k;state.sortDir=-1;}render();});
+  document.querySelectorAll("#mount tr.grphead").forEach(tr=>tr.onclick=()=>{
+    const gk=tr.dataset.gk;state.collapsed[gk]=!state.collapsed[gk];render();});
+}
 
-  // 섹터 필터 초기화
-  const sectors = [...new Set(DB.universe.map(s => s.sector))].sort();
-  const selS = document.getElementById("sector");
-  sectors.forEach(sc => {
-    const op = document.createElement("option");
-    op.value = sc; op.textContent = sc;
-    selS.appendChild(op);
-  });
+function bind(id,attr,fn){document.getElementById(id).onclick=e=>{const val=e.target.dataset[attr];if(val===undefined)return;
+  fn(val);document.querySelectorAll(`#${id} button`).forEach(x=>x.classList.toggle("on",x===e.target));render();};}
 
-  // 날짜 데이터 추출 및 정렬 (버그 완전 해결)
-  const allDates = [...new Set(Object.values(DB.prices).flatMap(p => Object.keys(p)))].sort();
-  if (allDates.length === 0) {
-    document.getElementById("sub").textContent = "날짜 정보가 없습니다.";
-    return;
+async function init(){
+  try{
+    const res=await fetch("data.json"); if(!res.ok)throw new Error("data.json 못 읽음 ("+res.status+")");
+    DB=await res.json();
+  }catch(err){
+    document.getElementById("mount").innerHTML=`<div class="err"><b>데이터 로딩 실패:</b> ${err.message}</div>`;
+    document.getElementById("sub").textContent="데이터 로딩 실패";return;
   }
-  const minD = allDates[0];
-  const maxD = allDates[allDates.length - 1];
   
-  const a1 = document.getElementById("a1");
-  const a2 = document.getElementById("a2");
-  const ep = document.getElementById("endpick");
-  
-  a1.min = a2.min = ep.min = minD;
-  a1.max = a2.max = ep.max = maxD;
-  
-  // 데이터 맞춤형 기본 선택값 설정
-  a1.value = allDates[Math.max(0, allDates.length - 21)] || minD; 
-  a2.value = allDates[Math.max(0, allDates.length - 1)] || maxD;
-  ep.value = maxD;
-  
-  document.getElementById("sub").textContent = `실데이터: ${minD} ~ ${maxD} · 총 ${DB.universe.length}개 종목 작동 중`;
-  
-  [a1, a2, ep].forEach(el => el.addEventListener('change', render));
-  document.getElementById("sector").addEventListener('change', (e) => { state.sector = e.target.value; render(); });
-  
-  bind("mkt", "mkt", v => state.mkt = v);
-  bind("mode", "mode", v => state.mode = v);
-  bind("groupby", "groupBy", v => state.groupBy = v);
-  bind("price", "showPrice", v => state.showPrice = v);
-  bind("endmode", "endMode", v => {
-    state.endMode = v;
-    ep.style.display = (v === "pick") ? "inline-block" : "none";
-  });
+  const sectors=[...new Set(DB.universe.map(s=>s.sector))].sort();
+  const selS=document.getElementById("sector");
+  sectors.forEach(sc=>{const op=document.createElement("option");op.value=sc;op.textContent=sc;selS.appendChild(op);});
 
-  document.addEventListener('click', (e) => {
-    const th = e.target.closest('th[data-key]');
-    if (th) {
-      const key = th.getAttribute('data-key');
-      state.sortAsc = (state.sortKey === key) ? !state.sortAsc : false;
-      state.sortKey = key;
-      render();
-    }
-  });
-
+  // [버그 수정 완료 및 동적 날짜 지정]
+  const allDates=[...new Set(Object.values(DB.prices).flatMap(p=>Object.keys(p)))].sort();
+  if(!allDates.length) { document.getElementById("sub").textContent="주가 데이터 내 날짜가 없습니다."; return; }
+  
+  const minD=allDates[0], maxD=allDates[allDates.length-1];
+  const a1=document.getElementById("a1"), a2=document.getElementById("a2"), ep=document.getElementById("endpick");
+  a1.min=a2.min=ep.min=minD; a1.max=a2.max=ep.max=maxD;
+  
+  // 날짜 고정값 탈피: 데이터의 실제 최신 범위를 연동하여 기본값 지정
+  a1.value=allDates[Math.max(0, allDates.length - 23)] || minD; 
+  a2.value=allDates[Math.max(0, allDates.length - 5)] || minD;
+  ep.value=maxD;
+  
+  document.getElementById("sub").textContent=`실데이터 ${minD} ~ ${maxD} · ${DB.universe.length}종목 연동 중`;
+  [a1,a2,ep].forEach(el=>el.onchange=render);
+  bind("mkt","mkt",v=>state.mkt=v);
+  document.getElementById("sector").onchange=e=>{state.sector=e.target.value;render();};
+  bind("mode","mode",v=>state.mode=v);
+  bind("price","price",v=>state.showPrice=(v==="on"));
+  bind("groupby","grp",v=>state.groupBy=v);
+  bind("endmode","end",v=>{state.endMode=v;ep.style.display=(v==="pick")?"inline-block":"none";});
   render();
 }
-
-function render() {
-  if (!DB) return;
-  const mount = document.getElementById("mount");
-  const dA1 = document.getElementById("a1").value;
-  const dA2 = document.getElementById("a2").value;
-  
-  const allDates = [...new Set(Object.values(DB.prices).flatMap(p => Object.keys(p)))].sort();
-  const dEnd = (state.endMode === 'latest') ? allDates[allDates.length - 1] : document.getElementById("endpick").value;
-  
-  const endIdx = allDates.indexOf(dEnd);
-  const dEndPrev = (endIdx > 0) ? allDates[endIdx - 1] : null;
-
-  // 벤치마크 수익률 계산
-  const kospiRetA = getReturn(DB.prices['KOSPI'], dA1, dA2) || 0;
-  const kosdaqRetA = getReturn(DB.prices['KOSDAQ'], dA1, dA2) || 0;
-  const kospiRet1D = dEndPrev ? (getReturn(DB.prices['KOSPI'], dEndPrev, dEnd) || 0) : 0;
-  const kosdaqRet1D = dEndPrev ? (getReturn(DB.prices['KOSDAQ'], dEndPrev, dEnd) || 0) : 0;
-
-  // [핵심 매핑 수정]: stock.code 대신 stock.ticker 구조 완전 반영
-  let items = DB.universe.map(stock => {
-    const ticker = stock.ticker;
-    const pData = DB.prices[ticker];
-    if (!pData) return null;
-
-    const retA = getReturn(pData, dA1, dA2);
-    const ret1D = dEndPrev ? getReturn(pData, dEndPrev, dEnd) : null;
-    const currentPrice = pData[dEnd] || null;
-
-    if (retA === null) return null;
-
-    const bRetA = (stock.market === 'KOSPI') ? kospiRetA : kosdaqRetA;
-    const bRet1D = (stock.market === 'KOSPI') ? kospiRet1D : kosdaqRet1D;
-
-    const rsA = retA - bRetA;
-    const rs1D = (ret1D !== null) ? (ret1D - bRet1D) : 0;
-
-    const valA = (state.mode === 'rs') ? rsA : retA;
-    const val1D = (state.mode === 'rs') ? rs1D : (ret1D || 0);
-
-    return {
-      ...stock,
-      price: currentPrice,
-      retA, ret1D, rsA, rs1D, valA, val1D,
-      score: valA * 0.7 + val1D * 0.3
-    };
-  }).filter(Boolean);
-
-  if (state.mkt !== 'all') items = items.filter(i => i.market === state.mkt);
-  if (state.sector !== 'all') items = items.filter(i => i.sector === state.sector);
-
-  const sortFunc = (a, b) => {
-    let va = a[state.sortKey], vb = b[state.sortKey];
-    if (va == null) return 1;
-    if (vb == null) return -1;
-    return state.sortAsc ? (va > vb ? 1 : -1) : (va < vb ? 1 : -1);
-  };
-
-  let html = `<table><thead><tr>`;
-  const sortSign = (key) => state.sortKey === key ? (state.sortAsc ? ' ▴' : ' ▾') : '';
-  
-  html += `<th style="width:60px;">순위</th>`;
-  html += `<th data-key="name">종목명${sortSign('name')}</th>`;
-  html += `<th style="width:90px;" data-key="market">시장${sortSign('market')}</th>`;
-  html += `<th data-key="sector">섹터${sortSign('sector')}</th>`;
-  if (state.showPrice) html += `<th class="num" data-key="price">현재가${sortSign('price')}</th>`;
-  html += `<th class="num" data-key="val1D">${state.mode==='rs'?'1일 RS':'1일 등락'}${sortSign('val1D')}</th>`;
-  html += `<th class="num" data-key="valA">${state.mode==='rs'?'구간 RS':'구간 등락'}${sortSign('valA')}</th>`;
-  html += `<th class="num" data-key="score">종합점수${sortSign('score')}</th>`;
-  html += `</tr></thead><tbody>`;
-
-  if (state.groupBy === 'sector') {
-    const groups = {};
-    items.forEach(item => {
-      if(!groups[item.sector]) groups[item.sector] = [];
-      groups[item.sector].push(item);
-    });
-
-    const groupKeys = Object.keys(groups).sort((a, b) => {
-      const avgA = avg(groups[a].map(x => x[state.sortKey]));
-      const avgB = avg(groups[b].map(x => x[state.sortKey]));
-      return state.sortAsc ? (avgA > avgB ? 1 : -1) : (avgA < avgB ? 1 : -1);
-    });
-
-    groupKeys.forEach(gKey => {
-      const gItems = groups[gKey].sort(sortFunc);
-      const gAvgScore = avg(gItems.map(x => x.score));
-      const gAvgValA = avg(gItems.map(x => x.valA));
-      
-      html += `<tr class="grp-hd">`;
-      html += `<td>•</td>`;
-      html += `<td colspan="3">${gKey} <span style="font-weight:normal; font-size:11px; color:var(--ink2);">(${gItems.length}개 종목)</span></td>`;
-      if (state.showPrice) html += `<td></td>`;
-      html += `<td></td>`;
-      html += `<td class="num ${gAvgValA>0?'val-up':(gAvgValA<0?'val-down':'')}">${gAvgValA.toFixed(2)}%</td>`;
-      html += `<td class="num">${gAvgScore.toFixed(2)}</td>`;
-      html += `</tr>`;
-
-      gItems.forEach((item, idx) => { html += renderRow(item, idx + 1); });
-    });
-  } else {
-    items.sort(sortFunc);
-    items.forEach((item, idx) => { html += renderRow(item, idx + 1); });
-  }
-
-  html += `</tbody></table>`;
-  mount.innerHTML = html;
-}
-
-function renderRow(item, rank) {
-  const fNum = (v, isPct=true) => {
-    if (v == null) return '-';
-    const cls = v > 0 ? 'val-up' : (v < 0 ? 'val-down' : 'val-flat');
-    const sign = v > 0 ? '+' : '';
-    return `<span class="${cls}">${sign}${v.toFixed(2)}${isPct?'%':''}</span>`;
-  };
-
-  let r = `<tr>`;
-  r += `<td class="num" style="color:var(--ink2);">${rank}</td>`;
-  r += `<td><b>${item.name}</b> <span style="font-size:11px; color:var(--ink2);">${item.ticker}</span></td>`;
-  r += `<td><span class="badge ${item.market.toLowerCase()}">${item.market}</span></td>`;
-  r += `<td style="color:var(--ink2);">${item.sector}</td>`;
-  if (state.showPrice) {
-    r += `<td class="num">${item.price ? item.price.toLocaleString() + '원' : '-'}</td>`;
-  }
-  r += `<td class="num">${fNum(item.val1D)}</td>`;
-  r += `<td class="num">${fNum(item.valA)}</td>`;
-  r += `<td class="num" style="font-weight:600;">${item.score.toFixed(2)}</td>`;
-  r += `</tr>`;
-  return r;
-}
-
-window.onload = init;
+init();
 </script>
 </body>
 </html>
