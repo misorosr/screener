@@ -76,6 +76,15 @@
 .rsperiods{display:flex;gap:6px;margin:0 0 12px}
 .rsperiods button{flex:1;padding:6px 0;font-size:12px;border:1px solid #e5e7eb;background:#fff;border-radius:7px;cursor:pointer;color:#6b7280}
 .rsperiods button.on{background:#111;color:#fff;border-color:#111;font-weight:600}
+.msel{position:relative;display:inline-block}
+.msel-btn{text-align:left;min-width:120px}
+.msel-panel{display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:50;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);padding:6px;min-width:170px;max-height:300px;overflow-y:auto}
+.msel-panel.on{display:block}
+.msel-panel label{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:7px;font-size:13px;cursor:pointer;white-space:nowrap}
+.msel-panel label:hover{background:#f2f4f7}
+.msel-panel input{cursor:pointer;width:15px;height:15px}
+.msel-panel .divider{height:1px;background:var(--line);margin:5px 0}
+.msel-panel .allrow{font-weight:600}
 </style>
 </head>
 <body>
@@ -97,7 +106,10 @@
     <div class="grp"><span class="lbl">시장</span>
       <div class="seg" id="mkt"><button data-mkt="all" class="on">전체</button><button data-mkt="KOSPI">코스피</button><button data-mkt="KOSDAQ">코스닥</button></div></div>
     <div class="grp"><span class="lbl">섹터</span>
-      <select id="sector" class="din"><option value="all">전체 섹터</option></select></div>
+      <div class="msel" id="sectorMsel">
+        <button type="button" class="din msel-btn" id="sectorBtn">전체 섹터</button>
+        <div class="msel-panel" id="sectorPanel"></div>
+      </div></div>
     <div class="grp"><span class="lbl">보기</span>
       <div class="seg" id="mode"><button data-mode="abs" class="on">등락률</button><button data-mode="rel">상대강도</button><button data-mode="rs">RS Score</button></div></div>
     <div class="grp"><span class="lbl">묶기</span>
@@ -122,7 +134,7 @@ const ROLL=[{label:"1일",key:"d1",n:1},{label:"2일",key:"d2",n:2},{label:"3일
 const RSW={w1:0.5,w3:0.3,w6:0.2};  // RS Score 가중치 (미너비니식: 최근 중시)
 const COLS=[{label:"구간①",key:"a1",anc:"hA",sep:1},{label:"구간②",key:"a2",anc:"hB"},
   {label:"1일",key:"d1",sep:1},{label:"2일",key:"d2"},{label:"3일",key:"d3"},{label:"1주",key:"w1"},{label:"2주",key:"w2"},{label:"1달",key:"M1"},{label:"3달",key:"M3"},{label:"6달",key:"M6"}];
-let DB=null, state={mkt:"all",sector:"all",mode:"abs",showPrice:true,sortKey:"a1",sortDir:-1,endMode:"last",groupBy:"sector",collapsed:{}};
+let DB=null, state={mkt:"all",sectors:[],mode:"abs",showPrice:true,sortKey:"a1",sortDir:-1,endMode:"last",groupBy:"sector",collapsed:{}};
 
 function pct(e,s){return Math.round((e-s)/s*10000)/100;}
 function datesOf(t){return Object.keys(DB.prices[t]).sort();}
@@ -249,7 +261,7 @@ function benchValues(mk){const a=computeReturns(mk);
   return v;}
 
 function visibleItems(){return DB.universe.filter(s=>
-  (state.mkt==="all"||s.market===state.mkt) && (state.sector==="all"||s.sector===state.sector));}
+  (state.mkt==="all"||s.market===state.mkt) && (state.sectors.length===0||state.sectors.includes(s.sector)));}
 function fmt(v){return v==null?"–":(v>0?"+":"")+v.toFixed(2)+"%";}
 function fmtP(v){return v==null?"–":Math.round(v).toLocaleString("ko-KR");}
 function mkB(m){return m==="KOSPI"?'<span class="mk k">코스피</span>':'<span class="mk q">코스닥</span>';}
@@ -321,6 +333,32 @@ function renderRS(){
   document.getElementById("mount").innerHTML=`${wInfo}<div class="card"><div class="scroll"><table><thead><tr>${h2}</tr></thead><tbody>${b}</tbody></table></div></div>${brokenHtml}`;
 }
 
+function buildSectorPanel(){
+  const sectors=[...new Set(DB.universe.map(s=>s.sector))].sort();
+  const panel=document.getElementById("sectorPanel");
+  if(!panel) return;
+  // "전체" 행 + 구분선 + 섹터별 체크박스
+  let html='<label class="allrow"><input type="checkbox" id="secAll" '+(state.sectors.length===0?'checked':'')+'> 전체 섹터</label>';
+  html+='<div class="divider"></div>';
+  sectors.forEach(sc=>{
+    const on=state.sectors.includes(sc);
+    const safe=sc.replace(/"/g,'&quot;');
+    html+='<label><input type="checkbox" class="secChk" value="'+safe+'" '+(on?'checked':'')+'> '+sc+'</label>';
+  });
+  panel.innerHTML=html;
+  updateSectorBtn();
+}
+function updateSectorBtn(){
+  const btn=document.getElementById("sectorBtn");
+  if(!btn) return;
+  if(state.sectors.length===0){ btn.textContent="전체 섹터"; }
+  else if(state.sectors.length===1){ btn.textContent=state.sectors[0]; }
+  else { btn.textContent=state.sectors.length+"개 섹터 선택"; }
+}
+function onSectorChange(){
+  buildSectorPanel();   // 체크 상태 다시 그림
+  render();
+}
 function render(){
   if(!DB)return;
   if(state.mode==="rs"){ renderRS(); return; }   // RS Score 모드는 전용 화면
@@ -429,10 +467,8 @@ async function init(){
     이 파일은 data.json과 같은 폴더에 두고 <b>로컬 서버</b>로 열어야 합니다. 예) <code>python3 -m http.server</code> 후 <code>localhost:8000</code></div>`;
     document.getElementById("sub").textContent="데이터 로딩 실패";return;
   }
-  // 섹터 필터 드롭다운 옵션 동적 생성 (섹터 많아져도 깔끔)
-  const sectors=[...new Set(DB.universe.map(s=>s.sector))].sort();
-  const selS=document.getElementById("sector");
-  sectors.forEach(sc=>{const op=document.createElement("option");op.value=sc;op.textContent=sc;selS.appendChild(op);});
+  // 섹터 다중선택 체크박스 패널 생성
+  buildSectorPanel();
 
   const allDates=Object.values(DB.prices).flatMap(p=>Object.keys(p));
   const minD=allDates.sort()[0], maxD=allDates.sort()[allDates.length-1];
@@ -442,7 +478,6 @@ async function init(){
   document.getElementById("sub").textContent=`실데이터 ${minD} ~ ${maxD} · ${DB.universe.length}종목 · 섹터별 그룹 · 끝점·구간 바꾸면 즉석 재계산`;
   [a1,a2,ep].forEach(el=>el.onchange=render);
   bind("mkt","mkt",v=>state.mkt=v);
-  document.getElementById("sector").onchange=e=>{state.sector=e.target.value;render();};
   bind("mode","mode",v=>state.mode=v);
   bind("price","price",v=>state.showPrice=(v==="on"));
   bind("groupby","grp",v=>state.groupBy=v);
@@ -453,6 +488,16 @@ init();
 
 // RS Line 팝업 이벤트 (위임)
 document.addEventListener("click", function(e){
+  // 섹터 드롭다운 버튼 → 펼치기/접기
+  if(e.target.id==="sectorBtn"){
+    document.getElementById("sectorPanel").classList.toggle("on");
+    e.stopPropagation(); return;
+  }
+  // 패널 바깥 클릭 → 닫기
+  const panel=document.getElementById("sectorPanel");
+  if(panel && panel.classList.contains("on") && !e.target.closest("#sectorMsel")){
+    panel.classList.remove("on");
+  }
   const cell=e.target.closest(".sparkcell");
   if(cell){ openRSModal(cell.dataset.tk, cell.dataset.mk, cell.dataset.nm); return; }
   if(e.target.id==="rsclose" || e.target.id==="rsmodal"){
@@ -460,6 +505,20 @@ document.addEventListener("click", function(e){
   }
   const pb=e.target.closest("#rsperiods button");
   if(pb){ rsModalState.days=parseInt(pb.dataset.days); drawRSModal(); }
+});
+
+// 섹터 체크박스 변경 처리
+document.addEventListener("change", function(e){
+  if(e.target.id==="secAll"){
+    state.sectors=[];   // 전체 선택 = 빈 배열
+    onSectorChange();
+  } else if(e.target.classList && e.target.classList.contains("secChk")){
+    const v=e.target.value;
+    const i=state.sectors.indexOf(v);
+    if(e.target.checked){ if(i<0) state.sectors.push(v); }
+    else { if(i>=0) state.sectors.splice(i,1); }
+    onSectorChange();
+  }
 });
 </script>
 </body>
