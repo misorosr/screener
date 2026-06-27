@@ -62,6 +62,8 @@
   .note{font-size:11px;color:#9096a1;margin-top:16px;line-height:1.6;border-top:1px solid var(--line);padding-top:12px;}
   .broken{background:#fff8e6;border:1px solid #f0dca0;color:#8a6d1a;padding:11px 14px;border-radius:10px;font-size:12.5px;margin-top:12px;line-height:1.5;}
   .err{background:#fff4f4;border:1px solid #f3c9c9;color:#b42424;padding:14px;border-radius:10px;font-size:13px;margin:14px 0;}
+.topbadge{display:inline-block;margin-left:6px;font-size:10px;font-weight:700;color:#fff;background:rgb(var(--up));padding:1px 5px;border-radius:6px;vertical-align:middle}
+.rsinfo{font-size:12px;color:#6b7280;margin:0 0 10px;padding:8px 12px;background:#f7f8fa;border-radius:8px;line-height:1.5}
 </style>
 </head>
 <body>
@@ -85,7 +87,7 @@
     <div class="grp"><span class="lbl">섹터</span>
       <select id="sector" class="din"><option value="all">전체 섹터</option></select></div>
     <div class="grp"><span class="lbl">보기</span>
-      <div class="seg" id="mode"><button data-mode="abs" class="on">등락률</button><button data-mode="rel">상대강도</button></div></div>
+      <div class="seg" id="mode"><button data-mode="abs" class="on">등락률</button><button data-mode="rel">상대강도</button><button data-mode="rs">RS Score</button></div></div>
     <div class="grp"><span class="lbl">묶기</span>
       <div class="seg" id="groupby"><button data-grp="sector" class="on">섹터별</button><button data-grp="none">안 묶기</button></div></div>
     <div class="grp"><span class="lbl">가격</span>
@@ -103,9 +105,10 @@
 </div>
 
 <script>
-const ROLL=[{label:"1일",key:"d1",n:1},{label:"1주",key:"w1",n:5},{label:"2주",key:"w2",n:10},{label:"1달",key:"M1",n:22}];
+const ROLL=[{label:"1일",key:"d1",n:1},{label:"2일",key:"d2",n:2},{label:"3일",key:"d3",n:3},{label:"1주",key:"w1",n:5},{label:"2주",key:"w2",n:10},{label:"1달",key:"M1",n:22},{label:"3달",key:"M3",n:66},{label:"6달",key:"M6",n:132}];
+const RSW={w1:0.5,w3:0.3,w6:0.2};  // RS Score 가중치 (미너비니식: 최근 중시)
 const COLS=[{label:"구간①",key:"a1",anc:"hA",sep:1},{label:"구간②",key:"a2",anc:"hB"},
-  {label:"1일",key:"d1",sep:1},{label:"1주",key:"w1"},{label:"2주",key:"w2"},{label:"1달",key:"M1"}];
+  {label:"1일",key:"d1",sep:1},{label:"2일",key:"d2"},{label:"3일",key:"d3"},{label:"1주",key:"w1"},{label:"2주",key:"w2"},{label:"1달",key:"M1"},{label:"3달",key:"M3"},{label:"6달",key:"M6"}];
 let DB=null, state={mkt:"all",sector:"all",mode:"abs",showPrice:true,sortKey:"a1",sortDir:-1,endMode:"last",groupBy:"sector",collapsed:{}};
 
 function pct(e,s){return Math.round((e-s)/s*10000)/100;}
@@ -139,6 +142,13 @@ function rowValues(item){
     v.abs[k]=a[k];
     v.rel[k]=(a[k]==null||b[k]==null)?null:Math.round((a[k]-b[k])*100)/100;
   });
+  // RS Score = 1M/3M/6M 상대강도의 가중합 (미너비니식 가중치)
+  const r1=v.rel.M1, r3=v.rel.M3, r6=v.rel.M6;
+  if(r1==null||r3==null||r6==null){
+    v.rsScore=null;   // 기간 데이터 부족하면 점수 없음
+  }else{
+    v.rsScore=Math.round((RSW.w1*r1 + RSW.w3*r3 + RSW.w6*r6)*100)/100;
+  }
   return v;
 }
 function benchValues(mk){const a=computeReturns(mk);
@@ -158,8 +168,68 @@ function cellBg(v,mx){if(v==null||v===0)return"transparent";const a=Math.min(Mat
   return v>0?`rgba(var(--up),${a.toFixed(3)})`:`rgba(var(--down),${a.toFixed(3)})`;}
 function avg(arr){const v=arr.filter(x=>x!=null);return v.length?v.reduce((a,b)=>a+b,0)/v.length:null;}
 
+function renderRS(){
+  // RS Score 전용 화면: 종목당 점수 1개 + 순위 + 상위%
+  const broken=[];
+  const items=visibleItems().map(it=>{
+    try{ return {it,vals:rowValues(it)}; }
+    catch(e){ broken.push(it); return null; }
+  }).filter(x=>x!=null).filter(x=>{
+    if(x.vals && x.vals._now!=null) return true;
+    broken.push(x.it); return false;
+  });
+  // RS Score 있는 것만 순위 매김 (점수 높은 순)
+  const scored=items.filter(x=>x.vals.rsScore!=null)
+                    .sort((a,b)=>b.vals.rsScore-a.vals.rsScore);
+  const noScore=items.filter(x=>x.vals.rsScore==null);  // 기간 부족(6개월 데이터 없는 신규상장 등)
+  const N=scored.length;
+
+  // 헤더
+  let h2='<th class="name">종목</th><th class="nowc">현재가</th>'
+       +'<th>RS Score</th><th>1달</th><th>3달</th><th>6달</th><th>순위</th><th>상위%</th>';
+  let b="";
+  scored.forEach((row,i)=>{
+    const it=row.it, v=row.vals;
+    const rank=i+1;
+    const pctRank=Math.round((rank/N)*100);  // 상위 몇 %
+    const top10 = pctRank<=10;
+    const mk = (it.market==="KOSPI")?'<span class="mk k">코스피</span>':'<span class="mk q">'+(it.market||"-")+'</span>';
+    const sc=v.rsScore;
+    const scColor = sc>0?'color:rgb(var(--up));font-weight:700':sc<0?'color:rgb(var(--down));font-weight:700':'';
+    const topBadge = top10?'<span class="topbadge">TOP'+pctRank+'%</span>':'';
+    let r=`<td class="name"><b><span class="rank">${rank}</span>${it.name||it.ticker}</b>${mk}<span class="sct">${it.sector||""}</span><div class="tkr">${it.ticker}</div></td>`;
+    r+=`<td class="price nowc">${fmtP(v._now)}</td>`;
+    r+=`<td style="${scColor}">${(sc>0?'+':'')+sc.toFixed(2)}${topBadge}</td>`;
+    r+=`<td>${fmt(v.rel.M1)}</td><td>${fmt(v.rel.M3)}</td><td>${fmt(v.rel.M6)}</td>`;
+    r+=`<td><b>${rank}위</b></td>`;
+    r+=`<td>${top10?'<b style="color:rgb(var(--up))">상위 '+pctRank+'%</b>':'상위 '+pctRank+'%'}</td>`;
+    b+=`<tr${top10?' style="background:rgba(var(--up),0.06)"':''}>${r}</tr>`;
+  });
+  // 점수 없는 종목 (데이터 부족)
+  noScore.forEach(row=>{
+    const it=row.it,v=row.vals;
+    const mk = (it.market==="KOSPI")?'<span class="mk k">코스피</span>':'<span class="mk q">'+(it.market||"-")+'</span>';
+    let r=`<td class="name"><b>${it.name||it.ticker}</b>${mk}<span class="sct">${it.sector||""}</span><div class="tkr">${it.ticker}</div></td>`;
+    r+=`<td class="price nowc">${fmtP(v._now)}</td>`;
+    r+=`<td style="color:#9096a1">–</td><td>${fmt(v.rel.M1)}</td><td>${fmt(v.rel.M3)}</td><td>${fmt(v.rel.M6)}</td><td>–</td><td style="color:#9096a1">데이터부족</td>`;
+    b+=`<tr>${r}</tr>`;
+  });
+
+  const wInfo=`<div class="rsinfo">RS Score = (1달 RS × ${RSW.w1}) + (3달 RS × ${RSW.w3}) + (6달 RS × ${RSW.w6}) · 미너비니식 가중치(최근 중시) · 점수 높을수록 시장 주도주 · 총 ${N}종목 중 순위</div>`;
+
+  let brokenHtml="";
+  const dropList=(DB.dropped||[]).map(d=>`${d.name}(${d.ticker})`);
+  const brokenList=broken.map(it=>`${it.name}(${it.ticker})`);
+  const allBroken=[...new Set([...brokenList,...dropList])];
+  if(allBroken.length){
+    brokenHtml=`<div class="broken">⚠️ 데이터가 부족해 표시하지 못한 종목: <b>${allBroken.join(", ")}</b></div>`;
+  }
+  document.getElementById("mount").innerHTML=`${wInfo}<div class="card"><div class="scroll"><table><thead><tr>${h2}</tr></thead><tbody>${b}</tbody></table></div></div>${brokenHtml}`;
+}
+
 function render(){
   if(!DB)return;
+  if(state.mode==="rs"){ renderRS(); return; }   // RS Score 모드는 전용 화면
   const broken=[];
   const items=visibleItems().map(it=>{
     try{ return {it,vals:rowValues(it)}; }
