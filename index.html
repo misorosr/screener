@@ -64,6 +64,18 @@
   .err{background:#fff4f4;border:1px solid #f3c9c9;color:#b42424;padding:14px;border-radius:10px;font-size:13px;margin:14px 0;}
 .topbadge{display:inline-block;margin-left:6px;font-size:10px;font-weight:700;color:#fff;background:rgb(var(--up));padding:1px 5px;border-radius:6px;vertical-align:middle}
 .rsinfo{font-size:12px;color:#6b7280;margin:0 0 10px;padding:8px 12px;background:#f7f8fa;border-radius:8px;line-height:1.5}
+.sparkcell{cursor:pointer;padding:4px 8px!important}
+.sparkcell:hover{background:#eef0f3}
+#rsmodal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:100}
+#rsmodal.on{display:flex}
+.rsbox{background:#fff;border-radius:14px;padding:20px;max-width:90vw;width:560px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.rsbox h3{margin:0 0 4px;font-size:17px}
+.rsbox .sub{font-size:12px;color:#6b7280;margin:0 0 14px}
+.rsbox .close{float:right;cursor:pointer;font-size:20px;color:#9096a1;line-height:1;border:none;background:none}
+.rsbox .trend{font-size:13px;margin-top:10px;padding:8px 12px;border-radius:8px;background:#f7f8fa}
+.rsperiods{display:flex;gap:6px;margin:0 0 12px}
+.rsperiods button{flex:1;padding:6px 0;font-size:12px;border:1px solid #e5e7eb;background:#fff;border-radius:7px;cursor:pointer;color:#6b7280}
+.rsperiods button.on{background:#111;color:#fff;border-color:#111;font-weight:600}
 </style>
 </head>
 <body>
@@ -95,6 +107,7 @@
   </div>
 
   <div id="mount"></div>
+<div id="rsmodal"><div class="rsbox"><button class="close" id="rsclose">×</button><h3 id="rstitle"></h3><p class="sub" id="rssub"></p><div class="rsperiods" id="rsperiods"><button data-days="22">1개월</button><button data-days="66">3개월</button><button data-days="132" class="on">6개월</button><button data-days="250">1년</button></div><div id="rschart"></div><div class="trend" id="rstrend"></div></div></div>
 
   <div class="legend">
     <span><span class="sw" style="background:rgba(220,38,38,.7)"></span>상승 / 초과</span>
@@ -133,6 +146,85 @@ function computeReturns(t){
   ROLL.forEach(r=>{const bd=nBack(t,eD,r.n); const bp=bd?priceAt(t,bd):null;
     out[r.key]=valid(bp)?pct(eP,bp):null;});
   return out;
+}
+function rsLineSeries(ticker, market, days){
+  // 종목종가 ÷ 지수종가 시계열 (최근 days 거래일). 추세 보기용.
+  const sp=DB.prices[ticker], ip=DB.prices[market];
+  if(!sp||!ip) return [];
+  const dates=Object.keys(sp).filter(d=>ip[d]!=null).sort();
+  const recent=dates.slice(-days);
+  const out=[];
+  recent.forEach(d=>{
+    const s=sp[d], i=ip[d];
+    if(valid(s)&&valid(i)&&i>0) out.push({d, v:s/i});
+  });
+  return out;
+}
+function sparkline(series, w, hgt){
+  // series → 작은 SVG 선그래프 문자열
+  if(!series||series.length<2) return "";
+  const vals=series.map(p=>p.v);
+  const mn=Math.min(...vals), mx=Math.max(...vals), rng=(mx-mn)||1;
+  const n=series.length;
+  const pts=series.map((p,i)=>{
+    const x=(i/(n-1))*w;
+    const y=hgt-((p.v-mn)/rng)*hgt;
+    return x.toFixed(1)+","+y.toFixed(1);
+  }).join(" ");
+  const up=vals[vals.length-1]>=vals[0];
+  const col=up?"rgb(var(--up))":"rgb(var(--down))";
+  return `<svg width="${w}" height="${hgt}" viewBox="0 0 ${w} ${hgt}" style="display:block"><polyline points="${pts}" fill="none" stroke="${col}" stroke-width="1.5"/></svg>`;
+}
+function bigRSChart(series, w, hgt){
+  // 축·격자 있는 큰 RS Line SVG
+  if(!series||series.length<2) return "<div style='padding:40px;text-align:center;color:#9096a1'>데이터 부족</div>";
+  const vals=series.map(p=>p.v);
+  const mn=Math.min(...vals), mx=Math.max(...vals), rng=(mx-mn)||1;
+  const n=series.length, pad=30;
+  const W=w, H=hgt;
+  const plotW=W-pad*2, plotH=H-pad*1.5;
+  const pts=series.map((p,i)=>{
+    const x=pad+(i/(n-1))*plotW;
+    const y=pad/2+plotH-((p.v-mn)/rng)*plotH;
+    return x.toFixed(1)+","+y.toFixed(1);
+  }).join(" ");
+  const up=vals[vals.length-1]>=vals[0];
+  const col=up?"rgb(var(--up))":"rgb(var(--down))";
+  // 시작·끝 날짜
+  const d0=series[0].d.slice(2), d1=series[series.length-1].d.slice(2);
+  return `<svg width="100%" viewBox="0 0 ${W} ${H}" style="display:block">
+    <line x1="${pad}" y1="${pad/2}" x2="${pad}" y2="${pad/2+plotH}" stroke="#e5e7eb"/>
+    <line x1="${pad}" y1="${pad/2+plotH}" x2="${W-pad}" y2="${pad/2+plotH}" stroke="#e5e7eb"/>
+    <polyline points="${pts}" fill="none" stroke="${col}" stroke-width="2"/>
+    <text x="${pad}" y="${H-6}" font-size="10" fill="#9096a1">${d0}</text>
+    <text x="${W-pad}" y="${H-6}" font-size="10" fill="#9096a1" text-anchor="end">${d1}</text>
+  </svg>`;
+}
+let rsModalState={tk:null,mk:null,nm:null,days:132};
+const RSDAYLABEL={22:"1개월",66:"3개월",132:"6개월",250:"1년"};
+function drawRSModal(){
+  const {tk,mk,nm,days}=rsModalState;
+  const series=rsLineSeries(tk, mk, days);
+  const lbl=RSDAYLABEL[days]||days+"일";
+  document.getElementById("rstitle").textContent=nm+" · RS Line";
+  document.getElementById("rssub").textContent="종가 ÷ "+(mk==="KOSPI"?"코스피":"코스닥")+" 지수 · 최근 "+lbl+" 추세 (우상향=시장 이기는 중)";
+  document.getElementById("rschart").innerHTML=bigRSChart(series, 520, 240);
+  let trendTxt="데이터 부족";
+  if(series.length>=2){
+    const chg=(series[series.length-1].v/series[0].v-1)*100;
+    const up=chg>=0;
+    trendTxt=`추세: <b style="color:${up?'rgb(var(--up))':'rgb(var(--down))'}">${up?'우상향 ▲':'우하향 ▼'}</b> · ${lbl}간 RS ${chg>=0?'+':''}${chg.toFixed(1)}% ${up?'(시장보다 강해지는 중 — 주도주 신호)':'(시장보다 약해지는 중)'}`;
+  }
+  document.getElementById("rstrend").innerHTML=trendTxt;
+  // 버튼 활성 표시
+  document.querySelectorAll("#rsperiods button").forEach(b=>{
+    b.classList.toggle("on", parseInt(b.dataset.days)===days);
+  });
+}
+function openRSModal(tk, mk, nm){
+  rsModalState={tk,mk,nm,days:132};  // 팝업 열면 6개월부터
+  drawRSModal();
+  document.getElementById("rsmodal").classList.add("on");
 }
 function rowValues(item){
   const t=item.ticker, mk=item.market;
@@ -186,7 +278,7 @@ function renderRS(){
 
   // 헤더
   let h2='<th class="name">종목</th><th class="nowc">현재가</th>'
-       +'<th>RS Score</th><th>1달</th><th>3달</th><th>6달</th><th>순위</th><th>상위%</th>';
+       +'<th>RS Score</th><th>1달</th><th>3달</th><th>6달</th><th>순위</th><th>상위%</th><th>RS추세(6달)</th>';
   let b="";
   scored.forEach((row,i)=>{
     const it=row.it, v=row.vals;
@@ -203,6 +295,8 @@ function renderRS(){
     r+=`<td>${fmt(v.rel.M1)}</td><td>${fmt(v.rel.M3)}</td><td>${fmt(v.rel.M6)}</td>`;
     r+=`<td><b>${rank}위</b></td>`;
     r+=`<td>${top10?'<b style="color:rgb(var(--up))">상위 '+pctRank+'%</b>':'상위 '+pctRank+'%'}</td>`;
+    const series=rsLineSeries(it.ticker, it.market, 132);
+    r+=`<td class="sparkcell" data-tk="${it.ticker}" data-mk="${it.market}" data-nm="${it.name||it.ticker}" title="클릭하면 크게 보기">${sparkline(series,80,24)}</td>`;
     b+=`<tr${top10?' style="background:rgba(var(--up),0.06)"':''}>${r}</tr>`;
   });
   // 점수 없는 종목 (데이터 부족)
@@ -211,7 +305,7 @@ function renderRS(){
     const mk = (it.market==="KOSPI")?'<span class="mk k">코스피</span>':'<span class="mk q">'+(it.market||"-")+'</span>';
     let r=`<td class="name"><b>${it.name||it.ticker}</b>${mk}<span class="sct">${it.sector||""}</span><div class="tkr">${it.ticker}</div></td>`;
     r+=`<td class="price nowc">${fmtP(v._now)}</td>`;
-    r+=`<td style="color:#9096a1">–</td><td>${fmt(v.rel.M1)}</td><td>${fmt(v.rel.M3)}</td><td>${fmt(v.rel.M6)}</td><td>–</td><td style="color:#9096a1">데이터부족</td>`;
+    r+=`<td style="color:#9096a1">–</td><td>${fmt(v.rel.M1)}</td><td>${fmt(v.rel.M3)}</td><td>${fmt(v.rel.M6)}</td><td>–</td><td style="color:#9096a1">데이터부족</td><td></td>`;
     b+=`<tr>${r}</tr>`;
   });
 
@@ -356,6 +450,17 @@ async function init(){
   render();
 }
 init();
+
+// RS Line 팝업 이벤트 (위임)
+document.addEventListener("click", function(e){
+  const cell=e.target.closest(".sparkcell");
+  if(cell){ openRSModal(cell.dataset.tk, cell.dataset.mk, cell.dataset.nm); return; }
+  if(e.target.id==="rsclose" || e.target.id==="rsmodal"){
+    document.getElementById("rsmodal").classList.remove("on");
+  }
+  const pb=e.target.closest("#rsperiods button");
+  if(pb){ rsModalState.days=parseInt(pb.dataset.days); drawRSModal(); }
+});
 </script>
 </body>
 </html>
