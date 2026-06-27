@@ -113,7 +113,7 @@
     <div class="grp"><span class="lbl">보기</span>
       <div class="seg" id="mode"><button data-mode="abs" class="on">등락률</button><button data-mode="rel">상대강도</button><button data-mode="rs">RS Score</button></div></div>
     <div class="grp"><span class="lbl">묶기</span>
-      <div class="seg" id="groupby"><button data-grp="sector" class="on">섹터별</button><button data-grp="none">안 묶기</button></div></div>
+      <div class="seg" id="groupby"><button data-grp="sector" class="on">시장+섹터</button><button data-grp="sectoronly">섹터만</button><button data-grp="none">안 묶기</button></div></div>
     <div class="grp"><span class="lbl">가격</span>
       <div class="seg" id="price"><button data-price="on" class="on">표시</button><button data-price="off">숨김</button></div></div>
   </div>
@@ -411,9 +411,13 @@ function render(){
       if(a==null)return 1;if(bb==null)return -1;return (a-bb)*state.sortDir;});
     sorted.forEach((row,i)=>b+=rowHTML(row,i+1));
   } else {
-    // 그룹 = 시장 · 섹터
+    // 그룹 키: "시장+섹터"면 시장·섹터로, "섹터만"이면 섹터로만 (코스피·코스닥 섞임)
+    const bySectorOnly = (state.groupBy==="sectoronly");
     const groups={};
-    items.forEach(row=>{const key=row.it.market+" · "+row.it.sector;(groups[key]=groups[key]||[]).push(row);});
+    items.forEach(row=>{
+      const key = bySectorOnly ? row.it.sector : (row.it.market+" · "+row.it.sector);
+      (groups[key]=groups[key]||[]).push(row);
+    });
     // 그룹 정렬: 그룹 평균(현재 정렬 컬럼) 높은 순
     const groupKeys=Object.keys(groups).sort((ka,kb)=>{
       const ma=avg(groups[ka].map(r=>r.vals[state.mode][state.sortKey]));
@@ -424,8 +428,18 @@ function render(){
       const rows=groups[gk];
       const mkt=rows[0].it.market, sector=rows[0].it.sector;
       const isCol=state.collapsed[gk];
-      // 그룹 헤더
-      let gh=`<td class="name"><span class="caret">${isCol?'▸':'▾'}</span><span class="gmk" style="${mkColor(mkt)}">${mkt==="KOSPI"?"코스피":"코스닥"}</span>${sector}<span class="gcount">${rows.length}종목</span></td>`;
+      // 그룹 헤더 — 섹터만 모드면 시장 배지 생략(섞여있으니), 시장+섹터면 배지 표시
+      let mkBadge;
+      if(bySectorOnly){
+        const markets=[...new Set(rows.map(r=>r.it.market))];
+        mkBadge = markets.length>1
+          ? `<span class="gmk" style="background:#9096a1;color:#fff">코스피·코스닥</span>`
+          : `<span class="gmk" style="${mkColor(mkt)}">${mkt==="KOSPI"?"코스피":"코스닥"}</span>`;
+      }else{
+        mkBadge = `<span class="gmk" style="${mkColor(mkt)}">${mkt==="KOSPI"?"코스피":"코스닥"}</span>`;
+      }
+      const grpLabel = bySectorOnly ? sector : sector;
+      let gh=`<td class="name"><span class="caret">${isCol?'▸':'▾'}</span>${mkBadge}${grpLabel}<span class="gcount">${rows.length}종목</span></td>`;
       if(state.showPrice)gh+=`<td></td><td></td><td class="sep"></td>`;
       COLS.forEach(c=>{const gv=avg(rows.map(r=>r.vals[state.mode][c.key]));
         const col=gv==null?'':(gv>0?'color:rgb(var(--up))':gv<0?'color:rgb(var(--down))':'');
