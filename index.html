@@ -85,6 +85,9 @@
 .msel-panel input{cursor:pointer;width:15px;height:15px}
 .msel-panel .divider{height:1px;background:var(--line);margin:5px 0}
 .msel-panel .allrow{font-weight:600}
+.tvlink{display:inline-flex;align-items:center;margin-left:6px;color:#b0b4bc;vertical-align:middle;transition:color .12s}
+.tvlink:hover{color:#2563eb}
+.tvlink svg{display:block}
 </style>
 </head>
 <body>
@@ -158,6 +161,12 @@ function computeReturns(t){
   ROLL.forEach(r=>{const bd=nBack(t,eD,r.n); const bp=bd?priceAt(t,bd):null;
     out[r.key]=valid(bp)?pct(eP,bp):null;});
   return out;
+}
+function tvIcon(ticker, market){
+  // 트레이딩뷰 링크 아이콘 (KRX:티커). 클릭하면 새 탭.
+  const sym = "KRX:" + ticker;
+  const url = "https://www.tradingview.com/chart/?symbol=" + encodeURIComponent(sym);
+  return `<a class="tvlink" href="${url}" target="_blank" rel="noopener" title="트레이딩뷰에서 보기" onclick="event.stopPropagation()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 6"/><polyline points="15 6 21 6 21 12"/></svg></a>`;
 }
 function rsLineSeries(ticker, market, days){
   // 종목종가 ÷ 지수종가 시계열 (최근 days 거래일). 추세 보기용.
@@ -301,7 +310,7 @@ function renderRS(){
     const sc=v.rsScore;
     const scColor = sc>0?'color:rgb(var(--up));font-weight:700':sc<0?'color:rgb(var(--down));font-weight:700':'';
     const topBadge = top10?'<span class="topbadge">TOP'+pctRank+'%</span>':'';
-    let r=`<td class="name"><b><span class="rank">${rank}</span>${it.name||it.ticker}</b>${mk}<span class="sct">${it.sector||""}</span><div class="tkr">${it.ticker}</div></td>`;
+    let r=`<td class="name"><b><span class="rank">${rank}</span>${it.name||it.ticker}</b>${tvIcon(it.ticker,it.market)}${mk}<span class="sct">${it.sector||""}</span><div class="tkr">${it.ticker}</div></td>`;
     r+=`<td class="price nowc">${fmtP(v._now)}</td>`;
     r+=`<td style="${scColor}">${(sc>0?'+':'')+sc.toFixed(2)}${topBadge}</td>`;
     r+=`<td>${fmt(v.rel.M1)}</td><td>${fmt(v.rel.M3)}</td><td>${fmt(v.rel.M6)}</td>`;
@@ -315,7 +324,7 @@ function renderRS(){
   noScore.forEach(row=>{
     const it=row.it,v=row.vals;
     const mk = (it.market==="KOSPI")?'<span class="mk k">코스피</span>':'<span class="mk q">'+(it.market||"-")+'</span>';
-    let r=`<td class="name"><b>${it.name||it.ticker}</b>${mk}<span class="sct">${it.sector||""}</span><div class="tkr">${it.ticker}</div></td>`;
+    let r=`<td class="name"><b>${it.name||it.ticker}</b>${tvIcon(it.ticker,it.market)}${mk}<span class="sct">${it.sector||""}</span><div class="tkr">${it.ticker}</div></td>`;
     r+=`<td class="price nowc">${fmtP(v._now)}</td>`;
     r+=`<td style="color:#9096a1">–</td><td>${fmt(v.rel.M1)}</td><td>${fmt(v.rel.M3)}</td><td>${fmt(v.rel.M6)}</td><td>–</td><td style="color:#9096a1">데이터부족</td><td></td>`;
     b+=`<tr>${r}</tr>`;
@@ -399,7 +408,7 @@ function render(){
     try{
       const it=row.it,v=row.vals;
       const mk = (it.market==="KOSPI")?'<span class="mk k">코스피</span>':(it.market==="KOSDAQ")?'<span class="mk q">코스닥</span>':`<span class="mk q">${it.market||"-"}</span>`;
-      let r=`<td class="name"><b><span class="rank">${rank}</span>${it.name||it.ticker}</b>${mk}<span class="sct">${it.sector||""}</span><div class="tkr">${it.ticker}</div></td>`;
+      let r=`<td class="name"><b><span class="rank">${rank}</span>${it.name||it.ticker}</b>${tvIcon(it.ticker,it.market)}${mk}<span class="sct">${it.sector||""}</span><div class="tkr">${it.ticker}</div></td>`;
       if(state.showPrice)r+=`<td class="price">${fmtP(v._p1)}</td><td class="price">${fmtP(v._p2)}</td><td class="price nowc sep">${fmtP(v._now)}</td>`;
       COLS.forEach(c=>{const val=v[state.mode]?v[state.mode][c.key]:null;r+=`<td class="${c.sep?'sep':''}" style="background:${cellBg(val,mxs[c.key])}">${fmt(val)}</td>`;});
       return `<tr>${r}</tr>`;
